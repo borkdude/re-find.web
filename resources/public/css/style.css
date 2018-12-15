@@ -1,0 +1,30 @@
+/* some style */
+
+.mono { font-family: Consolas, monaco, monospace; }
+.help { font-size: 0.9rem; }
+
+.form-control::placeholder { opacity: 0.4; }
+
+/* footer always at bottom */
+/* https://codepen.io/cbracco/pen/zekgx */
+
+html {
+  box-sizing: border-box;
+  height: 100%;
+}
+body {
+  position: relative;
+  min-height: 100%;
+  padding-bottom: 2rem;
+}
+
+.footer {
+  position: absolute;
+  padding: 1rem;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  text-align: center;
+}
+
+/* end footer always at bottom */

@@ -1,0 +1,15 @@
+{:deps {org.clojure/clojure {:mvn/version "1.10.0-RC3"}
+        org.clojure/clojurescript {:mvn/version "1.10.439"}
+        reagent {:mvn/version "0.8.1"}
+        re-find {:local/root "../re-find"}
+        org.clojure/test.check {:mvn/version "0.9.0"}
+        speculative {:mvn/version "0.0.3-SNAPSHOT"}}
+ :paths ["src" "resources"]
+ :aliases {:fig {:extra-deps
+                  {com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"}
+                   com.bhauman/figwheel-main {:mvn/version "0.1.9"}}
+                :extra-paths [#_"/Users/Borkdude/Dropbox/dev/clojure/re-find/src" "src" "target" "test"]}
+           :dev {:main-opts ["-m" "figwheel.main" "-b" "dev" "-r"]}
+           :test  {:main-opts ["-m" "figwheel.main" "-co" "test.cljs.edn" "-m" re-find.test-runner]}
+           :build-simple {:main-opts ["-m" "cljs.main" "-O" "simple" "-d" "out" "-c" "re-find.web"]}
+           }}
