@@ -148,13 +148,13 @@
           [:div.form-group.row
            {:style {:cursor "default"}
             :on-click #(swap! help not)}
-           [:div.col-3 "Show help"]
-           [:div.col-9
+           [:div.col-md-2.col-sm-3 "Show help"]
+           [:div.col-md-10.col-sm-9
             [:input#exact {:type "checkbox"
                            :checked @help}]]]
           [:div.form-group.row
-           [:label.col-3.col-form-label {:for "args"} "Arguments"]
-           [:div.col-9
+           [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
+           [:div.col-md-10.col-sm-9
             [:input#args.form-control.mono
              {:placeholder "inc [1 2 3]"
               :value @args
@@ -162,8 +162,8 @@
           (when @help
             args-help)
           [:div.form-group.row
-           [:label.col-3.col-form-label {:for "ret"} "Returns"]
-           [:div.col-9
+           [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
+           [:div.col-md-10.col-sm-9
             [:input#ret.form-control.mono
              {:placeholder "[2 3 4]"
               :value @ret
@@ -172,15 +172,17 @@
                             (reset! ret (.. % -target -value)))}]]]
           (when @help
             returns-help)
-          (when-not (str/blank? (str/trim @ret))
+          (when-not (or
+                     (str/blank? (str/trim @args))
+                     (str/blank? (str/trim @ret)))
             [:div
              [:div
               [:div.form-group.row
                {:style {:cursor "default"}
                 :on-click #(swap! exact-ret-match? not)}
-               [:div.col-3
+               [:div.col-md-2.col-sm-3
                 [:span "Exact match?"]]
-               [:div.col-9
+               [:div.col-md-10.col-sm-9
                 [:input#exact {:type "checkbox"
                                :checked @exact-ret-match?}]]]]
              (when @help
