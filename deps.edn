@@ -11,4 +11,5 @@
                  :extra-paths ["src" "target" "test"]}
            :dev {:main-opts ["-m" "figwheel.main" "-b" "dev" "-r"]}
            :test  {:main-opts ["-m" "figwheel.main" "-co" "test.cljs.edn" "-m" re-find.test-runner]}
-           :build-simple {:main-opts ["-m" "cljs.main" "-O" "simple" "-d" "out" "-c" "re-find.web"]}}}
+           ;; I'm setting optimize-constants to false for now, because of circular error
+           :build-simple {:main-opts ["-m" "cljs.main" "-O" "simple" "-co" "{:pretty-print,false,:optimize-constants,false,:static-fns,true}" "-d" "out" "-c" "re-find.web"]}}}

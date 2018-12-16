@@ -2,23 +2,21 @@
   (:require
    [cljs.js :as cljs]
    [clojure.string :as str]
-   [goog.dom :as gdom]
-   [goog.string :as gstring]
-   [goog.string.format]
    [re-find.core :as re-find]
    [reagent.core :as r]
    [speculative.core.extra] ;; load specs
    [speculative.instrument] ;; load specs
-   ))
+   )
+  (:import [goog Uri]))
 
 (def nbsp "\u00a0")
 
-(defn get-app-element []
-  (gdom/getElement "app"))
+(defn wrap-vector [s]
+  (str "[" s "]"))
 
 (defn eval-str [s]
   (try
-    (let [args (gstring/format "[%s]" s)
+    (let [args (wrap-vector s)
           result (atom nil)]
       (cljs.js/eval-str
        (cljs/empty-state) args
@@ -95,102 +93,130 @@
             but not when the spec is " [:span.mono "int?"] "."]]
    [:div.row
     [:p.col-12 "Example:" nbsp [:span.mono "string?"] ". Only functions that
-    return a string are listed."]]])
+    return a string are listed."]]
+   [:div.row
+    [:p.col-12 "When exact match is enabled, the return value of a function
+            applied to arguments must be equal to the given return value. This
+            option only has effect when arguments are provided."]]])
 
-(def exact-help
-  [:div.help
-   [:div.row
-    [:p.col-12 "When enabled, the return value of a function applied to
-            arguments must be equal to the given return value."]]
-   [:div.row
-    [:p.col-12 "Example: when enabled and given return value
-    is " [:span.mono "\"message\""] ", only functions that return the string
-    \"message\" are listed."]]])
+(def init-state {:args ""
+                 :ret ""
+                 :exact-ret-match? nil
+                 :help false
+                 :copy-text "Click to copy"})
+
+(defonce app-state (r/atom init-state))
+
+(defn state-from-query-params []
+  (let [uri (.parse Uri (-> js/window .-location .-href))
+        qd (.getQueryData uri)
+        args (first (.getValues qd "args"))
+        returns (first (.getValues qd "ret"))
+        exact? (first (.getValues qd "exact"))]
+    (cond-> {}
+      args (assoc :args args)
+      returns (assoc :ret returns)
+      exact? (assoc :exact-ret-match? (= "true" exact?)))))
+
+(defn shareable-link []
+  (let [uri (.parse Uri (.. js/window -location -href))
+        {:keys [:args :ret :exact-ret-match?]} @app-state
+        qs (str/join "&" (filter identity
+                                 [(when (not-empty args) (str "args=" args))
+                                  (when (not-empty ret) (str "ret=" ret))
+                                  (when (boolean? exact-ret-match?)
+                                    (str "exact=" exact-ret-match?))]))
+        _ (.setQuery uri qs)]
+    (str uri)))
+
+(defn sync-address-bar []
+  (let [link (shareable-link)]
+    (when (and (not= init-state @app-state)
+               (not= link (.. js/window -location -href)))
+      (.replaceState js/window.history nil "" link))))
+
+(r/track! sync-address-bar)
 
 (defn app []
-  (let [args (r/atom "")
-        ret (r/atom "")
-        exact-ret-match? (r/atom false)
-        help (r/atom false)]
-    (fn []
-      (let [search-results
-            (let [args* (eval-str @args)
-                  ret* (eval-str @ret)]
-              (when (and (not= args* ::invalid)
-                         (not= ret* ::invalid)
-                         #_(do (prn "ARGS" (first ret*))
-                               true)
-                         #_(do (prn "RET" (first ret*))
-                             true))
-                (cond
-                  (and (not (str/blank? @args))
-                       (not (str/blank? @ret)))
-                  (re-find/match
-                   :args args*
-                   :ret (first ret*)
-                   :exact-ret-match? @exact-ret-match?)
-                  (not (str/blank? @args))
-                  (re-find/match :args args*)
-                  (not (str/blank? @ret))
-                  (try (re-find/match :ret (first ret*))
-                       (catch :default e
-                         (.error js/console e)
-                         nil)))))]
-        [:div.container
-         [:div.jumbotron
-          [:h3 "Welcome to re-find"]]
-         [:p.lead
-          [:span
-           "To find Clojure functions, start typing arguments and/or a return
+  (let [{:keys [:args :ret :exact-ret-match? :help]} @app-state
+        search-results
+        (let [args* (eval-str args)
+              ret* (eval-str ret)]
+          (when (and (not= args* ::invalid)
+                     (not= ret* ::invalid)
+                     #_(do (prn "ARGS" (first ret*))
+                           true)
+                     #_(do (prn "RET" (first ret*))
+                           true))
+            (cond
+              (and (not (str/blank? args))
+                   (not (str/blank? ret)))
+              (re-find/match
+               :args args*
+               :ret (first ret*)
+               :exact-ret-match? exact-ret-match?)
+              (not (str/blank? args))
+              (re-find/match :args args*)
+              (not (str/blank? ret))
+              (try (re-find/match :ret (first ret*))
+                   (catch :default e
+                     (.error js/console e)
+                     nil)))))
+        exact-disabled? (or
+                         (str/blank? (str/trim args))
+                         (str/blank? (str/trim ret)))]
+    [:div.container
+     [:div.jumbotron
+      [:h3 "Welcome to re-find"]]
+     [:p.lead
+      [:span
+       "To find Clojure functions, start typing arguments and/or a return
          value/predicate."]]
-         general-help
-         [:form
-          [:div.form-group.row
-           {:style {:cursor "default"}
-            :on-click #(swap! help not)}
-           [:div.col-md-2.col-sm-3 "Show help"]
-           [:div.col-md-10.col-sm-9
-            [:input#exact {:type "checkbox"
-                           :checked @help}]]]
-          [:div.form-group.row
-           [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
-           [:div.col-md-10.col-sm-9
-            [:input#args.form-control.mono
-             {:placeholder "inc [1 2 3]"
-              :value @args
-              :on-change #(reset! args (.. % -target -value))}]]]
-          (when @help
-            args-help)
-          [:div.form-group.row
-           [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
-           [:div.col-md-10.col-sm-9
-            [:input#ret.form-control.mono
-             {:placeholder "[2 3 4]"
-              :value @ret
-              :on-change #(do
-                            ;; (.log js/console %)
-                            (reset! ret (.. % -target -value)))}]]]
-          (when @help
-            returns-help)
-          (when-not (or
-                     (str/blank? (str/trim @args))
-                     (str/blank? (str/trim @ret)))
-            [:div
-             [:div
-              [:div.form-group.row
-               {:style {:cursor "default"}
-                :on-click #(swap! exact-ret-match? not)}
-               [:div.col-md-2.col-sm-3
-                [:span "Exact match?"]]
-               [:div.col-md-10.col-sm-9
-                [:input#exact {:type "checkbox"
-                               :checked @exact-ret-match?}]]]]
-             (when @help
-               exact-help)])]
-         [:div.row
-          [:div.col-12
-           (when (seq search-results)
-             [results @args search-results])]]]))))
+     general-help
+     [:form
+      [:div.form-group.row
+       {:style {:cursor "default"}
+        :on-click #(swap! app-state update :help not)}
+       [:div.col-md-2.col-sm-3 "Show help"]
+       [:div.col-md-10.col-sm-9
+        [:input#exact {:type "checkbox"
+                       :checked help}]]]
+      [:div.form-group.row
+       [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
+       [:div.col-md-10.col-sm-9
+        [:input#args.form-control.mono
+         {:placeholder "inc [1 2 3]"
+          :value args
+          :on-change #(swap! app-state assoc :args (.. % -target -value))}]]]
+      (when help
+        args-help)
+      [:div.form-group.row
+       [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
+       [:div.col-md-8.col-sm-7
+        [:input#ret.form-control.mono
+         {:placeholder "[2 3 4]"
+          :value ret
+          :on-change #(do
+                        ;; (.log js/console %)
+                        (swap! app-state assoc :ret (.. % -target -value)))}]]
+       [:div.col-md-2.col-sm-3
+        {:style {:cursor "default"}
+         :on-click #(when-not exact-disabled?
+                      (swap! app-state update :exact-ret-match? not))}
+        [:input#exact {:type "checkbox"
+                       :disabled exact-disabled?
+                       :checked exact-ret-match?
+                       :on-change (fn [])}]
+        nbsp
+        [:label.col-form-label
+         {:style {:opacity (if exact-disabled? "0.4" "1")}}
+         "exact match?"]]]
+      (when help
+        returns-help)]
+     [:div.row
+      [:div.col-12
+       (when (seq search-results)
+         [results args search-results])]]]))
 
 (defn page []
   [:div.page
@@ -200,11 +226,12 @@
   (r/render-component [page] el))
 
 (defn mount-app-element []
-  (when-let [el (get-app-element)]
+  (when-let [el (js/document.getElementById "app")]
     (mount el)))
 
 ;; conditionally start your application based on the presence of an "app" element
 ;; this is particularly helpful for testing this ns without launching the app
+(swap! app-state merge (state-from-query-params))
 (mount-app-element)
 
 ;; specify reload hook with ^;after-load metadata
