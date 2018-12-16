@@ -33,27 +33,6 @@
         (:value @result)))
     (catch :default _ ::invalid)))
 
-(defn show-sym [sym]
-  (if (= "cljs.core" (namespace sym))
-    (name sym)
-    (pr-str sym)))
-
-(defn results [args search-results]
-  [:table.table
-   [:thead
-    [:tr
-     [:th "function"]
-     [:th "arguments"]
-     [:th "return value"]]]
-   [:tbody.mono
-    (for [{:keys [:sym :ret-val]} search-results]
-      ^{:key (str sym "-" args)}
-      [:tr
-       [:td (show-sym sym)]
-       [:td args]
-       [:td (binding [*print-length* 10]
-              (pr-str ret-val))]])]])
-
 (def general-help
   [:div.help
    [:div.row
@@ -118,9 +97,9 @@
       returns (assoc :ret returns)
       exact? (assoc :exact-ret-match? (= "true" exact?)))))
 
-(defn shareable-link []
+(defn shareable-link [state]
   (let [uri (.parse Uri (.. js/window -location -href))
-        {:keys [:args :ret :exact-ret-match?]} @app-state
+        {:keys [:args :ret :exact-ret-match?]} state
         qs (str/join "&" (filter identity
                                  [(when (not-empty args) (str "args=" args))
                                   (when (not-empty ret) (str "ret=" ret))
@@ -130,16 +109,25 @@
     (str uri)))
 
 (defn sync-address-bar []
-  (let [link (shareable-link)]
-    (when (and (not= init-state @app-state)
-               (not= link (.. js/window -location -href)))
-      (.replaceState js/window.history nil "" link))))
+    (let [link (shareable-link @app-state)]
+      (when (and (not= init-state @app-state)
+                 (not= link (.. js/window -location -href)))
+        (.replaceState js/window.history nil "" link))))
 
 (r/track! sync-address-bar)
 
-(defn app []
-  (let [{:keys [:args :ret :exact-ret-match? :help]} @app-state
-        search-results
+(defn show-sym [sym]
+  (if (= "cljs.core" (namespace sym))
+    (name sym)
+    (pr-str sym)))
+
+(defn print-10 [v]
+  (binding [*print-length* 10]
+    (pr-str v)))
+
+(defn search-results []
+  (let [{:keys [:args :ret :exact-ret-match?]} @app-state
+        results
         (let [args* (eval-str args)
               ret* (eval-str ret)]
           (when (and (not= args* ::invalid)
@@ -147,7 +135,7 @@
                      #_(do (prn "ARGS" (first ret*))
                            true)
                      #_(do (prn "RET" (first ret*))
-                           true))
+                         true))
             (cond
               (and (not (str/blank? args))
                    (not (str/blank? ret)))
@@ -161,11 +149,27 @@
               (try (re-find/match :ret (first ret*))
                    (catch :default e
                      (.error js/console e)
-                     nil)))))
-        exact-disabled? (or
-                         (str/blank? (str/trim args))
-                         (str/blank? (str/trim ret)))]
+                     nil)))))]
+    (when (seq results)
+      [:table.table
+       [:thead
+        [:tr
+         [:th "function"]
+         [:th "arguments"]
+         [:th "return value"]]]
+       [:tbody.mono
+        (doall
+         (for [{:keys [:sym :ret-val]} results]
+           ^{:key (str (show-sym sym) "-" (print-10 args))}
+           [:tr
+            [:td (show-sym sym)]
+            [:td args]
+            [:td (print-10 ret-val)]]))]])))
+
+(defn app []
+  (let [{:keys [:args :ret :exact-ret-match? :help]} @app-state]
     [:div.container
+     #_[:pre (pr-str @app-state)]
      [:div.jumbotron
       [:h3 "Welcome to re-find"]]
      [:p.lead
@@ -197,26 +201,28 @@
          {:placeholder "[2 3 4]"
           :value ret
           :on-change #(do
-                        ;; (.log js/console %)
+                        (.log js/console "ret val input" (.. % -target -value))
                         (swap! app-state assoc :ret (.. % -target -value)))}]]
-       [:div.col-md-2.col-sm-3
-        {:style {:cursor "default"}
-         :on-click #(when-not exact-disabled?
-                      (swap! app-state update :exact-ret-match? not))}
-        [:input#exact {:type "checkbox"
-                       :disabled exact-disabled?
-                       :checked exact-ret-match?
-                       :on-change (fn [])}]
-        nbsp
-        [:label.col-form-label
-         {:style {:opacity (if exact-disabled? "0.4" "1")}}
-         "exact match?"]]]
+       (let [exact-disabled? (or
+                              (str/blank? (str/trim args))
+                              (str/blank? (str/trim ret)))]
+         [:div.col-md-2.col-sm-3
+          {:style {:cursor "default"}
+           :on-click #(when-not exact-disabled?
+                        (swap! app-state update :exact-ret-match? not))}
+          [:input#exact {:type "checkbox"
+                         :disabled exact-disabled?
+                         :checked exact-ret-match?
+                         :on-change (fn [])}]
+          nbsp
+          [:label.col-form-label
+           {:style {:opacity (if exact-disabled? "0.4" "1")}}
+           "exact match?"]])]
       (when help
         returns-help)]
      [:div.row
       [:div.col-12
-       (when (seq search-results)
-         [results args search-results])]]]))
+       [search-results]]]]))
 
 (defn page []
   [:div.page
