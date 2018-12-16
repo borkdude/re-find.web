@@ -30,7 +30,7 @@
          (reset! result res)))
       (if-let [err (:error @result)]
         (do
-          (println err)
+          #_(println err)
           ::invalid)
         (:value @result)))
     (catch :default _ ::invalid)))
@@ -50,7 +50,11 @@
    [:tbody.mono
     (for [{:keys [:sym :ret-val]} search-results]
       ^{:key (str sym "-" args)}
-      [:tr [:td (show-sym sym)] [:td args] [:td (pr-str ret-val)]])]])
+      [:tr
+       [:td (show-sym sym)]
+       [:td args]
+       [:td (binding [*print-length* 10]
+              (pr-str ret-val))]])]])
 
 (def general-help
   [:div.help
@@ -115,7 +119,7 @@
               (when (and (not= args* ::invalid)
                          (not= ret* ::invalid)
                          #_(do (prn "ARGS" (first ret*))
-                             true)
+                               true)
                          #_(do (prn "RET" (first ret*))
                              true))
                 (cond
