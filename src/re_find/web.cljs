@@ -4,6 +4,7 @@
    [clojure.string :as str]
    [re-find.core :as re-find]
    [reagent.core :as r]
+   [goog.functions :as functions]
    [speculative.core.extra] ;; load specs
    [speculative.instrument] ;; load specs
    )
@@ -85,6 +86,14 @@
                  :copy-text "Click to copy"})
 
 (defonce app-state (r/atom init-state))
+(defonce delayed-state (r/atom init-state))
+
+(defonce delayed-reset! (functions/debounce reset! 250))
+
+(defn sync-delayed-state! []
+  (delayed-reset! delayed-state @app-state))
+
+(r/track! sync-delayed-state!)
 
 (defn state-from-query-params []
   (let [uri (-> js/window .-location .-href)
@@ -92,33 +101,38 @@
         qd (.getQueryData uri)
         args (first (.getValues qd "args"))
         returns (first (.getValues qd "ret"))
-        exact? (first (.getValues qd "exact"))]
+        exact? (first (.getValues qd "exact"))
+        permutations? (first (.getValues qd "perms"))]
     (cond-> {}
       args (assoc :args args)
       returns (assoc :ret returns)
-      exact? (assoc :exact-ret-match? (= "true" exact?)))))
+      exact? (assoc :exact-ret-match? (= "true" exact?))
+      permutations? (assoc :permutations? (= "true" permutations?)))))
+
+(defn format-query-string [s]
+  (str/join " " (str/split (str/trim s) #"\s+")))
 
 (defn shareable-link [state]
   (let [uri (.parse Uri (.. js/window -location -href))
-        {:keys [:args :ret :exact-ret-match?]} state
-        qs (str/join "&" (filter identity
-                                 [(when (not-empty args)
-                                    (str "args=" args))
-                                  (when (not-empty ret)
-                                    (str "ret=" ret))
-                                  (when (boolean? exact-ret-match?)
-                                    (str "exact="
-                                         exact-ret-match?))]))]
-    (.setQuery uri qs)
+        {:keys [:args :ret :exact-ret-match? :permutations?]} state
+        qs (str/join "&"
+                     (filter identity
+                             [(when (not-empty args) (str "args=" (format-query-string args)))
+                              (when (not-empty ret) (str "ret=" (format-query-string ret)))
+                              (when (boolean? exact-ret-match?)
+                                (str "exact=" exact-ret-match?))
+                              (when (boolean? permutations?)
+                                (str "perms=" permutations?))]))
+        _ (.setQuery uri qs)]
     (-> (str uri)
         (str/replace #"\(" "%28")
         (str/replace #"\)" "%29"))))
 
 (defn sync-address-bar []
-    (let [link (shareable-link @app-state)]
-      (when (and (not= init-state @app-state)
-                 (not= link (.. js/window -location -href)))
-        (.replaceState js/window.history nil "" link))))
+  (let [link (shareable-link @app-state)]
+    (when (and (not= init-state @app-state)
+               (not= link (.. js/window -location -href)))
+      (.replaceState js/window.history nil "" link))))
 
 (r/track! sync-address-bar)
 
@@ -131,31 +145,49 @@
   (binding [*print-length* 10]
     (pr-str v)))
 
+(defn permutations [s]
+  (lazy-seq
+   (if (seq (rest s))
+     (apply concat
+            (for [x s]
+              (map #(cons x %) (permutations (remove #{x} s)))))
+     [s])))
+
+(defn mapply
+  "Applies a function f to the argument list formed by concatenating
+  everything but the last element of args with the last element of
+  args.  This is useful for applying a function that accepts keyword
+  arguments to a map."
+  [f & args]
+  (apply f (apply concat (butlast args) (last args))))
+
 (defn search-results []
-  (let [{:keys [:args :ret :exact-ret-match?]} @app-state
+  (let [{:keys [:args :ret :exact-ret-match? :permutations?]} @delayed-state
+        args* (when-not (str/blank? args) (eval-str args))
+        ret* (when-not (str/blank? ret) (eval-str ret))
+        args-permutations (when-not (= ::invalid args*)
+                            (if permutations? (permutations args*) [args*]))
         results
-        (let [args* (eval-str args)
-              ret* (eval-str ret)]
-          (when (and (not= args* ::invalid)
-                     (not= ret* ::invalid)
-                     #_(do (prn "ARGS" (first ret*))
-                           true)
-                     #_(do (prn "RET" (first ret*))
-                         true))
-            (cond
-              (and (not (str/blank? args))
-                   (not (str/blank? ret)))
-              (re-find/match
-               :args args*
-               :ret (first ret*)
-               :exact-ret-match? exact-ret-match?)
-              (not (str/blank? args))
-              (re-find/match :args args*)
-              (not (str/blank? ret))
-              (try (re-find/match :ret (first ret*))
-                   (catch :default e
-                     (.error js/console e)
-                     nil)))))]
+        (when (and (not= ::invalid args*)
+                   (not= ::invalid ret*))
+          (mapcat #(let [find-args (cond-> {}
+                                     (and args*
+                                      (not= args* ::invalid))
+                                     (assoc :args %)
+                                     (and
+                                      ret*
+                                      (not= ret* ::invalid)
+                                      (do #_(prn "RET" ret*) true))
+                                     (assoc :ret (first ret*))
+                                     (and args*
+                                          ret*
+                                          exact-ret-match?)
+                                     (assoc :exact-ret-match? true))]
+                     (try (mapply re-find/match find-args)
+                          (catch :default e
+                            (.error js/console e)
+                            nil)))
+                  args-permutations))]
     (when (seq results)
       [:table.table
        [:thead
@@ -165,15 +197,15 @@
          [:th "return value"]]]
        [:tbody.mono
         (doall
-         (for [{:keys [:sym :ret-val]} results]
+         (for [{:keys [:args :sym :ret-val]} results]
            ^{:key (str (show-sym sym) "-" (print-10 args))}
            [:tr
             [:td (show-sym sym)]
-            [:td args]
+            [:td (str/join " " (map pr-str args))]
             [:td (print-10 ret-val)]]))]])))
 
 (defn app []
-  (let [{:keys [:args :ret :exact-ret-match? :help]} @app-state]
+  (let [{:keys [:args :ret :exact-ret-match? :help :permutations?]} @app-state]
     [:div.container
      #_[:pre (pr-str @app-state)]
      [:div.jumbotron
@@ -187,35 +219,47 @@
       [:div.form-group.row
        {:style {:cursor "default"}
         :on-click #(swap! app-state update :help not)}
-       [:div.col-md-2.col-sm-3 "Show help"]
-       [:div.col-md-10.col-sm-9
+       [:div.col-2 "Show help"]
+       [:div.col-10
         [:input#exact {:type "checkbox"
                        :checked help}]]]
       [:div.form-group.row
        [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
-       [:div.col-md-10.col-sm-9
+       [:div.col-md-7.col-sm-6
         [:input#args.form-control.mono
          {:placeholder "inc [1 2 3]"
           :value args
-          :on-change #(swap! app-state assoc :args (.. % -target -value))}]]]
-      (when help
-        args-help)
+          :on-change #(swap! app-state assoc :args (.. % -target -value))}]]
+       (let [perms-disabled? (str/blank? (str/trim args))]
+         [:div.col-md-3.col-sm-4
+          {:style {:cursor "default"}
+           :on-click #(when-not perms-disabled?
+                        (swap! app-state update :permutations? not)
+                        (swap! delayed-state update :permutations? not))}
+          [:input#exact {:type "checkbox"
+                         :disabled perms-disabled?
+                         :checked permutations?
+                         :on-change (fn [])}]
+          nbsp
+          [:label.col-form-label
+           {:style {:opacity (if perms-disabled? "0.4" "1")}}
+           "include permutations?"]])]
+      (when help args-help)
       [:div.form-group.row
        [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
-       [:div.col-md-8.col-sm-7
+       [:div.col-md-7.col-sm-6
         [:input#ret.form-control.mono
          {:placeholder "[2 3 4]"
           :value ret
-          :on-change #(do
-                        (.log js/console "ret val input" (.. % -target -value))
-                        (swap! app-state assoc :ret (.. % -target -value)))}]]
+          :on-change #(swap! app-state assoc :ret (.. % -target -value))}]]
        (let [exact-disabled? (or
                               (str/blank? (str/trim args))
                               (str/blank? (str/trim ret)))]
-         [:div.col-md-2.col-sm-3
+         [:div.col-md-3.col-sm-4
           {:style {:cursor "default"}
            :on-click #(when-not exact-disabled?
-                        (swap! app-state update :exact-ret-match? not))}
+                        (swap! app-state update :exact-ret-match? not)
+                        (swap! delayed-state update :exact-ret-match? not))}
           [:input#exact {:type "checkbox"
                          :disabled exact-disabled?
                          :checked exact-ret-match?
@@ -243,7 +287,8 @@
 
 ;; conditionally start your application based on the presence of an "app" element
 ;; this is particularly helpful for testing this ns without launching the app
-(swap! app-state merge (state-from-query-params))
+(let [v (swap! app-state merge (state-from-query-params))]
+  (reset! delayed-state v))
 (mount-app-element)
 
 ;; specify reload hook with ^;after-load metadata
