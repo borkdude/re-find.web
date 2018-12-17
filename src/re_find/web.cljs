@@ -87,7 +87,8 @@
 (defonce app-state (r/atom init-state))
 
 (defn state-from-query-params []
-  (let [uri (.parse Uri (-> js/window .-location .-href))
+  (let [uri (-> js/window .-location .-href)
+        uri (.parse Uri uri)
         qd (.getQueryData uri)
         args (first (.getValues qd "args"))
         returns (first (.getValues qd "ret"))
@@ -101,12 +102,17 @@
   (let [uri (.parse Uri (.. js/window -location -href))
         {:keys [:args :ret :exact-ret-match?]} state
         qs (str/join "&" (filter identity
-                                 [(when (not-empty args) (str "args=" args))
-                                  (when (not-empty ret) (str "ret=" ret))
+                                 [(when (not-empty args)
+                                    (str "args=" args))
+                                  (when (not-empty ret)
+                                    (str "ret=" ret))
                                   (when (boolean? exact-ret-match?)
-                                    (str "exact=" exact-ret-match?))]))
-        _ (.setQuery uri qs)]
-    (str uri)))
+                                    (str "exact="
+                                         exact-ret-match?))]))]
+    (.setQuery uri qs)
+    (-> (str uri)
+        (str/replace #"\(" "%28")
+        (str/replace #"\)" "%29"))))
 
 (defn sync-address-bar []
     (let [link (shareable-link @app-state)]
