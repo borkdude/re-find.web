@@ -2,18 +2,42 @@
   (:require
    [cljs.js :as cljs]
    [clojure.string :as str]
+   [goog.functions :as functions]
    [re-find.core :as re-find]
    [reagent.core :as r]
-   [goog.functions :as functions]
    [speculative.core.extra] ;; load specs
    [speculative.instrument] ;; load specs
    )
   (:import [goog Uri]))
 
+(defprotocol ToFinite
+  (to-finite [x]))
+
 (def nbsp "\u00a0")
 
 (defn wrap-vector [s]
   (str "[" s "]"))
+
+(def take-max 100)
+(extend-protocol ToFinite
+
+  default
+  (to-finite [x] x)
+
+  LazySeq
+  (to-finite [x] (take take-max x))
+
+  Cons
+  (to-finite [x] (take take-max x))
+
+  Range
+  (to-finite [x] (take take-max x))
+
+  Iterate
+  (to-finite [x] (take take-max x))
+
+  Repeat
+  (to-finite [x] (take take-max x)))
 
 (defn eval-str [s]
   (try
@@ -29,9 +53,9 @@
          (reset! result res)))
       (if-let [err (:error @result)]
         (do
-          #_(println err)
+          (.error js/console err)
           ::invalid)
-        (:value @result)))
+        (mapv to-finite (:value @result))))
     (catch :default _ ::invalid)))
 
 (def general-help
@@ -159,10 +183,6 @@
     (name sym)
     (pr-str sym)))
 
-(defn print-10 [v]
-  (binding [*print-length* 10]
-    (pr-str v)))
-
 (defn permutations [s]
   (lazy-seq
    (if (seq (rest s))
@@ -180,60 +200,63 @@
   (apply f (apply concat (butlast args) (last args))))
 
 (defn search-results []
-  (let [{:keys [:args :ret :exact-ret-match? :permutations?]} @delayed-state
-        from-example? (and (empty? args)
-                           (empty? ret))
-        [args* ret*] (if from-example?
-                       [(eval-str (:args @example-state))
-                        (eval-str (:ret @example-state))]
-                       [(when-not (str/blank? args)
-                          (eval-str args))
-                        (when-not (str/blank? ret)
-                          (eval-str ret))])
-        [exact-ret-match? permutations?]
-        (if from-example?
-          [(:exact-ret-match? @example-state)
-           (:permutations? @example-state)]
-          [exact-ret-match? permutations?])
-        args-permutations (when-not (= ::invalid args*)
-                            (if permutations? (permutations args*) [args*]))
-        results
-        (when (and (not= ::invalid args*)
-                   (not= ::invalid ret*))
-          (mapcat #(let [find-args (cond-> {}
-                                     (and args*
-                                          (not= args* ::invalid))
-                                     (assoc :args %)
-                                     (and
-                                      ret*
-                                      (not= ret* ::invalid)
-                                      (do #_(prn "RET" ret*) true))
-                                     (assoc :ret (first ret*))
-                                     (and args*
-                                          ret*
-                                          exact-ret-match?)
-                                     (assoc :exact-ret-match? true))]
-                     (try (mapply re-find/match find-args)
-                          (catch :default e
-                            (.error js/console e)
-                            nil)))
-                  args-permutations))]
-    (when (seq results)
-      [:table.table
-       {:style {:opacity (if from-example? "0.4" "1")}}
-       [:thead
-        [:tr
-         [:th "function"]
-         [:th "arguments"]
-         [:th "return value"]]]
-       [:tbody.mono
-        (doall
-         (for [{:keys [:args :sym :ret-val]} results]
-           ^{:key (str (show-sym sym) "-" (print-10 args))}
-           [:tr
-            [:td (show-sym sym)]
-            [:td (str/join " " (map pr-str args))]
-            [:td (print-10 ret-val)]]))]])))
+  (binding [*print-length* 10]
+    (let [{:keys [:args :ret :exact-ret-match? :permutations?]} @delayed-state
+          from-example? (and (empty? args)
+                             (empty? ret))
+          [args* ret*] (if from-example?
+                         [(eval-str (:args @example-state))
+                          (eval-str (:ret @example-state))]
+                         [(when-not (str/blank? args)
+                            (eval-str args))
+                          (when-not (str/blank? ret)
+                            (eval-str ret))])
+          [exact-ret-match? permutations?]
+          (if from-example?
+            [(:exact-ret-match? @example-state)
+             (:permutations? @example-state)]
+            [exact-ret-match? permutations?])
+          args-permutations (when-not (= ::invalid args*)
+                              (if permutations? (permutations args*) [args*]))
+          results
+          (when (and (not= ::invalid args*)
+                     (not= ::invalid ret*))
+            (mapcat #(let [find-args (cond-> {}
+                                       (and args*
+                                            (not= args* ::invalid))
+                                       (assoc :args %)
+                                       (and
+                                        ret*
+                                        (not= ret* ::invalid)
+                                        (do #_(prn "RET" ret*) true))
+                                       (assoc :ret (first ret*))
+                                       (and args*
+                                            ret*
+                                            exact-ret-match?)
+                                       (assoc :exact-ret-match? true))]
+                       (try (mapply re-find/match find-args)
+                            (catch :default e
+                              (.error js/console e)
+                              nil)))
+                    args-permutations))]
+      (when (seq results)
+        [:table.table
+         {:style {:opacity (if from-example? "0.4" "1")}}
+         [:thead
+          [:tr
+           [:th "function"]
+           [:th "arguments"]
+           [:th "return value"]]]
+         [:tbody.mono
+          (doall
+           (for [{:keys [:args :sym :ret-val]} results]
+             (do
+               #_(prn "SYM" sym (pr-str args))
+               ^{:key (pr-str (show-sym sym) "-" (pr-str args))}
+               [:tr
+                [:td (show-sym sym)]
+                [:td (str/join " " (map pr-str args))]
+                [:td (pr-str ret-val)]])))]]))))
 
 (defn app []
   (let [{:keys [:args :ret :exact-ret-match? :help :permutations?]} @app-state]
