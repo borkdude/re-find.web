@@ -79,11 +79,16 @@
             applied to arguments must be equal to the given return value. This
             option only has effect when arguments are provided."]]])
 
+(def placeholders [{:args "#\"re-find\" \">>> re-find <<<\""
+                    :ret "\"re-find\""
+                    :permutations? true
+                    :exact-ret-match? true}])
+
 (def init-state {:args ""
                  :ret ""
                  :exact-ret-match? nil
                  :help false
-                 :copy-text "Click to copy"})
+                 :placeholders (first placeholders)})
 
 (defonce app-state (r/atom init-state))
 (defonce delayed-state (r/atom init-state))
@@ -115,14 +120,16 @@
 (defn shareable-link [state]
   (let [uri (.parse Uri (.. js/window -location -href))
         {:keys [:args :ret :exact-ret-match? :permutations?]} state
-        qs (str/join "&"
-                     (filter identity
-                             [(when (not-empty args) (str "args=" (format-query-string args)))
-                              (when (not-empty ret) (str "ret=" (format-query-string ret)))
-                              (when (boolean? exact-ret-match?)
-                                (str "exact=" exact-ret-match?))
-                              (when (boolean? permutations?)
-                                (str "perms=" permutations?))]))
+        qs (if (and (str/blank? ret)
+                    (str/blank? args)) nil
+               (str/join "&"
+                         (filter identity
+                                 [(when (not-empty args) (str "args=" (format-query-string args)))
+                                  (when (not-empty ret) (str "ret=" (format-query-string ret)))
+                                  (when (true? exact-ret-match?)
+                                    (str "exact=" exact-ret-match?))
+                                  (when (true? permutations?)
+                                    (str "perms=" permutations?))])))
         _ (.setQuery uri qs)]
     (-> (str uri)
         (str/replace #"\(" "%28")
@@ -130,9 +137,8 @@
 
 (defn sync-address-bar []
   (let [link (shareable-link @app-state)]
-    (when (and (not= init-state @app-state)
-               (not= link (.. js/window -location -href)))
-      (.replaceState js/window.history nil "" link))))
+    (when true #_(not= link (.. js/window -location -href))
+          (.replaceState js/window.history nil "" link))))
 
 (r/track! sync-address-bar)
 
@@ -162,9 +168,22 @@
   (apply f (apply concat (butlast args) (last args))))
 
 (defn search-results []
-  (let [{:keys [:args :ret :exact-ret-match? :permutations?]} @delayed-state
-        args* (when-not (str/blank? args) (eval-str args))
-        ret* (when-not (str/blank? ret) (eval-str ret))
+  (let [{:keys [:args :ret :exact-ret-match? :permutations?
+                :placeholders]} @delayed-state
+        from-placeholder? (and (empty? args)
+                               (empty? ret))
+        [args* ret*] (if from-placeholder?
+                       [(eval-str (:args placeholders))
+                        (eval-str (:ret placeholders))]
+                       [(when-not (str/blank? args)
+                          (eval-str args))
+                        (when-not (str/blank? ret)
+                          (eval-str ret))])
+        [exact-ret-match? permutations?]
+        (if from-placeholder?
+          [(:exact-ret-match? placeholders)
+           (:permutations? placeholders)]
+          [exact-ret-match? permutations?])
         args-permutations (when-not (= ::invalid args*)
                             (if permutations? (permutations args*) [args*]))
         results
@@ -172,7 +191,7 @@
                    (not= ::invalid ret*))
           (mapcat #(let [find-args (cond-> {}
                                      (and args*
-                                      (not= args* ::invalid))
+                                          (not= args* ::invalid))
                                      (assoc :args %)
                                      (and
                                       ret*
@@ -190,6 +209,7 @@
                   args-permutations))]
     (when (seq results)
       [:table.table
+       {:style {:opacity (if from-placeholder? "0.4" "1")}}
        [:thead
         [:tr
          [:th "function"]
@@ -205,74 +225,83 @@
             [:td (print-10 ret-val)]]))]])))
 
 (defn app []
-  (let [{:keys [:args :ret :exact-ret-match? :help :permutations?]} @app-state]
-    [:div.container
-     #_[:pre (pr-str @app-state)]
-     [:div.jumbotron
-      [:h3 "Welcome to re-find"]]
-     [:p.lead
-      [:span
-       "To find Clojure functions, start typing arguments and/or a return
+  (let [{:keys [:args :ret :exact-ret-match? :help :permutations?
+                :placeholders]} @app-state]
+    (let [placeholder-mode? (and (empty? args)
+                                 (empty? ret))]
+      [:div.container
+       #_[:pre (pr-str @app-state)]
+       [:div.jumbotron
+        [:h3 "Welcome to re-find"]]
+       [:p.lead
+        [:span
+         "To find Clojure functions, start typing arguments and/or a return
          value/predicate."]]
-     general-help
-     [:form
-      [:div.form-group.row
-       {:style {:cursor "default"}
-        :on-click #(swap! app-state update :help not)}
-       [:div.col-2 "Show help"]
-       [:div.col-10
-        [:input#exact {:type "checkbox"
-                       :checked help}]]]
-      [:div.form-group.row
-       [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
-       [:div.col-md-7.col-sm-6
-        [:input#args.form-control.mono
-         {:placeholder "inc [1 2 3]"
-          :value args
-          :on-change #(swap! app-state assoc :args (.. % -target -value))}]]
-       (let [perms-disabled? (str/blank? (str/trim args))]
-         [:div.col-md-3.col-sm-4
-          {:style {:cursor "default"}
-           :on-click #(when-not perms-disabled?
-                        (swap! app-state update :permutations? not)
-                        (swap! delayed-state update :permutations? not))}
+       general-help
+       [:form
+        [:div.form-group.row
+         {:style {:cursor "default"}
+          :on-click #(swap! app-state update :help not)}
+         [:div.col-2 "Show help"]
+         [:div.col-10
           [:input#exact {:type "checkbox"
-                         :disabled perms-disabled?
-                         :checked permutations?
-                         :on-change (fn [])}]
-          nbsp
-          [:label.col-form-label
-           {:style {:opacity (if perms-disabled? "0.4" "1")}}
-           "include permutations?"]])]
-      (when help args-help)
-      [:div.form-group.row
-       [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
-       [:div.col-md-7.col-sm-6
-        [:input#ret.form-control.mono
-         {:placeholder "[2 3 4]"
-          :value ret
-          :on-change #(swap! app-state assoc :ret (.. % -target -value))}]]
-       (let [exact-disabled? (or
-                              (str/blank? (str/trim args))
-                              (str/blank? (str/trim ret)))]
-         [:div.col-md-3.col-sm-4
-          {:style {:cursor "default"}
-           :on-click #(when-not exact-disabled?
-                        (swap! app-state update :exact-ret-match? not)
-                        (swap! delayed-state update :exact-ret-match? not))}
-          [:input#exact {:type "checkbox"
-                         :disabled exact-disabled?
-                         :checked exact-ret-match?
-                         :on-change (fn [])}]
-          nbsp
-          [:label.col-form-label
-           {:style {:opacity (if exact-disabled? "0.4" "1")}}
-           "exact match?"]])]
-      (when help
-        returns-help)]
-     [:div.row
-      [:div.col-12
-       [search-results]]]]))
+                         :checked help}]]]
+        [:div.form-group.row
+         [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
+         [:div.col-md-7.col-sm-6
+          [:input#args.form-control.mono
+           {:placeholder (:args placeholders)
+            :value args
+            :on-change #(swap! app-state assoc :args (.. % -target -value))}]]
+         (let [perms-disabled? (str/blank? (str/trim args))]
+           [:div.col-md-3.col-sm-4
+            {:style {:cursor "default"}
+             :on-click #(when-not perms-disabled?
+                          (swap! app-state update :permutations? not)
+                          (swap! delayed-state update :permutations? not))}
+            [:input#exact {:type "checkbox"
+                           :disabled perms-disabled?
+                           :checked (boolean
+                                     (if-not placeholder-mode?
+                                       permutations?
+                                       (:permutations? placeholders)))
+                           :on-change (fn [])}]
+            nbsp
+            [:label.col-form-label
+             {:style {:opacity (if perms-disabled? "0.4" "1")}}
+             "include permutations?"]])]
+        (when help args-help)
+        [:div.form-group.row
+         [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
+         [:div.col-md-7.col-sm-6
+          [:input#ret.form-control.mono
+           {:placeholder (:ret placeholders)
+            :value ret
+            :on-change #(swap! app-state assoc :ret (.. % -target -value))}]]
+         (let [exact-disabled? (or
+                                (str/blank? (str/trim args))
+                                (str/blank? (str/trim ret)))]
+           [:div.col-md-3.col-sm-4
+            {:style {:cursor "default"}
+             :on-click #(when-not exact-disabled?
+                          (swap! app-state update :exact-ret-match? not)
+                          (swap! delayed-state update :exact-ret-match? not))}
+            [:input#exact {:type "checkbox"
+                           :disabled exact-disabled?
+                           :checked (boolean
+                                     (if-not placeholder-mode?
+                                       exact-ret-match?
+                                       (:exact-ret-match? placeholders)))
+                           :on-change (fn [])}]
+            nbsp
+            [:label.col-form-label
+             {:style {:opacity (if exact-disabled? "0.4" "1")}}
+             "exact match?"]])]
+        (when help
+          returns-help)]
+       [:div.row
+        [:div.col-12
+         [search-results]]]])))
 
 (defn page []
   [:div.page
