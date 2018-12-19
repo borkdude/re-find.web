@@ -13,12 +13,8 @@
 (defprotocol ToFinite
   (to-finite [x]))
 
-(def nbsp "\u00a0")
-
-(defn wrap-vector [s]
-  (str "[" s "]"))
-
 (def take-max 100)
+
 (extend-protocol ToFinite
 
   default
@@ -39,6 +35,9 @@
   Repeat
   (to-finite [x] (take take-max x)))
 
+(defn wrap-vector [s]
+  (str "[" s "]"))
+
 (defn eval-str [s]
   (try
     (let [args (wrap-vector s)
@@ -58,6 +57,8 @@
         (mapv to-finite (:value @result))))
     (catch :default _ ::invalid)))
 
+(def nbsp "\u00a0")
+
 (def general-help
   [:div.help
    [:div.row
@@ -75,7 +76,8 @@
   [:div.help
    [:div.row
     [:p.col-12 "The arguments are matched against the " [:span.mono ":args"] "
-    spec."]]
+    spec. For matching on no arguments, the special
+    value " [:span.mono "#_empty"] " can be used."]]
    [:div.row
     [:p.col-12 "Example: " [:span.mono "inc [1 2 3]"] ". This matches when the
     first argument can be a function and the second argument a vector of
