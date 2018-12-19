@@ -1,6 +1,6 @@
 # re-find.web
 
-HTML interface to re-find hosted at [https://re-find.michielborkent.nl](https://re-find.michielborkent.nl).
+HTML interface to re-find hosted at [re-find.it](https://re-find.it).
 
 ## Development
 
