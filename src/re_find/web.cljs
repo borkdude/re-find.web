@@ -69,7 +69,7 @@
      [:a
       {:href "https://github.com/borkdude/re-find"} "re-find"]
      " or " [:a
-             {:href "https://github.com/borkdude/re-find"} "speculative"] "."]]])
+             {:href "https://github.com/slipset/speculative"} "speculative"] "."]]])
 
 (def args-help
   [:div.help
