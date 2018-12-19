@@ -1,9 +1,15 @@
 #!/bin/bash
 
-rm -rf out
+## https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
+set -Eeo pipefail
+
 commit=$(git rev-parse --short=16 HEAD)
-echo "Building re-find $commit"
-clojure -A:build-simple
+
+if [ "$PREVIOUS" != "true" ]; then
+    echo "Building re-find $commit"
+    rm -rf out
+    clojure -A:build-simple
+fi
 
 echo "Preparing deploy folder"
 rm -rf /tmp/re-find.web
@@ -15,11 +21,11 @@ cp resources/public/prod.html /tmp/re-find.web/index.html
 sed -i -e "s/\$COMMIT/$commit/g" /tmp/re-find.web/index.html
 rm "/tmp/re-find.web/index.html-e"
 
-if [ $PREVIEW ]; then
-  echo "Previewing app"
-  cd /tmp/re-find.web && python -m SimpleHTTPServer
+if [ "$PREVIEW" != "true" ]; then
+    echo "Copying to server"
+    ssh borkdude@michielborkent.nl "rm -rf re-find.web; mkdir -p re-find.web"
+    scp -r /tmp/re-find.web/* borkdude@eetvoorjeleven.nu:re-find.web
 else
-  echo "Copying to server"
-  ssh borkdude@michielborkent.nl "rm -rf re-find.web; mkdir -p re-find.web"
-  scp -r /tmp/re-find.web/* borkdude@eetvoorjeleven.nu:re-find.web              
+    echo "Previewing app"
+    cd /tmp/re-find.web && python -m SimpleHTTPServer
 fi
