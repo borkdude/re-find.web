@@ -79,26 +79,17 @@
             applied to arguments must be equal to the given return value. This
             option only has effect when arguments are provided."]]])
 
-(def placeholders [{:args "#\"re-find\" \">>> re-find <<<\""
-                    :ret "\"re-find\""
-                    :permutations? true
-                    :exact-ret-match? true}])
+(def examples [{:args "\">>> re-find <<<\" #\"re-find\""
+                :ret "\"re-find\""
+                :permutations? true
+                :exact-ret-match? true}
+               {:args "#{1 2 3} #{4 5 6}"
+                :ret "set?"}])
 
 (def init-state {:args ""
                  :ret ""
                  :exact-ret-match? nil
-                 :help false
-                 :placeholders (first placeholders)})
-
-(defonce app-state (r/atom init-state))
-(defonce delayed-state (r/atom init-state))
-
-(defonce delayed-reset! (functions/debounce reset! 250))
-
-(defn sync-delayed-state! []
-  (delayed-reset! delayed-state @app-state))
-
-(r/track! sync-delayed-state!)
+                 :help false})
 
 (defn state-from-query-params []
   (let [uri (-> js/window .-location .-href)
@@ -113,6 +104,27 @@
       returns (assoc :ret returns)
       exact? (assoc :exact-ret-match? (= "true" exact?))
       permutations? (assoc :permutations? (= "true" permutations?)))))
+
+(defonce app-state (r/atom (merge init-state (state-from-query-params))))
+(defonce example-state (r/atom {}))
+(defonce delayed-state (r/atom init-state))
+
+(defonce delayed-reset! (functions/debounce reset! 250))
+
+(defn sync-delayed-state! []
+  (when (not= @delayed-state @app-state)
+    (delayed-reset! delayed-state @app-state)))
+
+(r/track! sync-delayed-state!)
+
+(defn rotate-examples! [examples]
+  (if (and (empty? (:args @app-state))
+           (empty? (:ret @app-state)))
+    (do (reset! example-state (first examples))
+        (js/setTimeout #(rotate-examples! (rest examples)) 10000))
+    (js/setTimeout #(rotate-examples! examples) 10000)))
+
+(rotate-examples! (cycle (shuffle examples)))
 
 (defn format-query-string [s]
   (str/join " " (str/split (str/trim s) #"\s+")))
@@ -168,21 +180,20 @@
   (apply f (apply concat (butlast args) (last args))))
 
 (defn search-results []
-  (let [{:keys [:args :ret :exact-ret-match? :permutations?
-                :placeholders]} @delayed-state
-        from-placeholder? (and (empty? args)
-                               (empty? ret))
-        [args* ret*] (if from-placeholder?
-                       [(eval-str (:args placeholders))
-                        (eval-str (:ret placeholders))]
+  (let [{:keys [:args :ret :exact-ret-match? :permutations?]} @delayed-state
+        from-example? (and (empty? args)
+                           (empty? ret))
+        [args* ret*] (if from-example?
+                       [(eval-str (:args @example-state))
+                        (eval-str (:ret @example-state))]
                        [(when-not (str/blank? args)
                           (eval-str args))
                         (when-not (str/blank? ret)
                           (eval-str ret))])
         [exact-ret-match? permutations?]
-        (if from-placeholder?
-          [(:exact-ret-match? placeholders)
-           (:permutations? placeholders)]
+        (if from-example?
+          [(:exact-ret-match? @example-state)
+           (:permutations? @example-state)]
           [exact-ret-match? permutations?])
         args-permutations (when-not (= ::invalid args*)
                             (if permutations? (permutations args*) [args*]))
@@ -209,7 +220,7 @@
                   args-permutations))]
     (when (seq results)
       [:table.table
-       {:style {:opacity (if from-placeholder? "0.4" "1")}}
+       {:style {:opacity (if from-example? "0.4" "1")}}
        [:thead
         [:tr
          [:th "function"]
@@ -225,10 +236,9 @@
             [:td (print-10 ret-val)]]))]])))
 
 (defn app []
-  (let [{:keys [:args :ret :exact-ret-match? :help :permutations?
-                :placeholders]} @app-state]
-    (let [placeholder-mode? (and (empty? args)
-                                 (empty? ret))]
+  (let [{:keys [:args :ret :exact-ret-match? :help :permutations?]} @app-state]
+    (let [example-mode? (and (empty? args)
+                             (empty? ret))]
       [:div.container
        #_[:pre (pr-str @app-state)]
        [:div.jumbotron
@@ -250,7 +260,7 @@
          [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
          [:div.col-md-7.col-sm-6
           [:input#args.form-control.mono
-           {:placeholder (:args placeholders)
+           {:placeholder (:args @example-state)
             :value args
             :on-change #(swap! app-state assoc :args (.. % -target -value))}]]
          (let [perms-disabled? (str/blank? (str/trim args))]
@@ -262,9 +272,9 @@
             [:input#exact {:type "checkbox"
                            :disabled perms-disabled?
                            :checked (boolean
-                                     (if-not placeholder-mode?
+                                     (if-not example-mode?
                                        permutations?
-                                       (:permutations? placeholders)))
+                                       (:permutations? @example-state)))
                            :on-change (fn [])}]
             nbsp
             [:label.col-form-label
@@ -275,7 +285,7 @@
          [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
          [:div.col-md-7.col-sm-6
           [:input#ret.form-control.mono
-           {:placeholder (:ret placeholders)
+           {:placeholder (:ret @example-state)
             :value ret
             :on-change #(swap! app-state assoc :ret (.. % -target -value))}]]
          (let [exact-disabled? (or
@@ -289,9 +299,9 @@
             [:input#exact {:type "checkbox"
                            :disabled exact-disabled?
                            :checked (boolean
-                                     (if-not placeholder-mode?
+                                     (if-not example-mode?
                                        exact-ret-match?
-                                       (:exact-ret-match? placeholders)))
+                                       (:exact-ret-match? @example-state)))
                            :on-change (fn [])}]
             nbsp
             [:label.col-form-label
@@ -316,8 +326,6 @@
 
 ;; conditionally start your application based on the presence of an "app" element
 ;; this is particularly helpful for testing this ns without launching the app
-(let [v (swap! app-state merge (state-from-query-params))]
-  (reset! delayed-state v))
 (mount-app-element)
 
 ;; specify reload hook with ^;after-load metadata
