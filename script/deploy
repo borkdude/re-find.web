@@ -8,7 +8,7 @@ commit=$(git rev-parse --short=16 HEAD)
 if [ "$PREVIOUS" != "true" ]; then
     echo "Building re-find $commit"
     rm -rf out
-    clojure -A:build-simple
+    clojure -A:local-deps:build-simple
 fi
 
 echo "Preparing deploy folder"

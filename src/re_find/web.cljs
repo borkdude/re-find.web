@@ -110,7 +110,10 @@
                 :permutations? true
                 :exact-ret-match? true}
                {:args "#{1 2 3} #{4 5 6}"
-                :ret "set?"}])
+                :ret "set?"}
+               {:args "0 [1 2 3]"
+                :ret "[1 0 2 0 3]"
+                :exact-ret-match? true}])
 
 (def init-state {:args ""
                  :ret ""
