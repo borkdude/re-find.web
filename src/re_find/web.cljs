@@ -295,7 +295,11 @@
          [:div.col-2 "Show help"]
          [:div.col-10
           [:input#exact {:type "checkbox"
-                         :checked help}]]]
+                         :checked help
+                         :auto-complete "off"
+                         :auto-correct "off"
+                         :auto-capitalize "off"
+                         :spell-check "false"}]]]
         [:div.form-group.row
          [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
          [:div.col-md-7.col-sm-6
@@ -315,7 +319,11 @@
                                      (if-not example-mode?
                                        permutations?
                                        (:permutations? @example-state)))
-                           :on-change (fn [])}]
+                           :on-change (fn [])
+                           :auto-complete "off"
+                           :auto-correct "off"
+                           :auto-capitalize "off"
+                           :spell-check "false"}]
             nbsp
             [:label.col-form-label
              {:style {:opacity (if perms-disabled? "0.4" "1")}}
