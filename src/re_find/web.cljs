@@ -116,7 +116,9 @@
                {:args "0 [1 2 3]"
                 :ret "[1 0 2 0 3]"
                 :exact-ret-match? true}
-               {:args "1" :ret "2" :exact-ret-match? true}])
+               {:args "1" :ret "2" :exact-ret-match? true}
+               {:args "odd? (range 10)"
+                :ret "map?"}])
 
 (def init-state {:args ""
                  :ret ""
