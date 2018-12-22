@@ -7,8 +7,7 @@
    [goog.functions :as functions]
    [re-find.core :as re-find]
    [reagent.core :as r]
-   [speculative.core.extra] ;; load specs
-   [speculative.instrument] ;; load specs
+   [speculative.instrument] ;; loads all specs
 )
   (:import [goog Uri]))
 
