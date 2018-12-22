@@ -26,7 +26,7 @@ jobs:
           command: script/build
       - run:
           name: Test project
-          command: SERVE=/tmp/re-find.web PORT=8000 clojure -A:browser-test
+          command: SERVE=/tmp/re-find.web PORT=8000 clojure -A:browser-tests
       - save_cache:
           key: m2-{{ checksum "deps.edn" }}
           paths:

@@ -2,7 +2,8 @@
 
 [![CircleCI](https://circleci.com/gh/borkdude/re-find.web/tree/master.svg?style=svg)](https://circleci.com/gh/borkdude/re-find.web/tree/master)
 
-HTML interface to re-find hosted at [re-find.it](https://re-find.it).
+Web interface to [re-find](https://github.com/borkdude/re-find) hosted at
+[re-find.it](https://re-find.it).
 
 ## Development
 
@@ -25,6 +26,22 @@ and you should see an alert in the browser window.
 To clean all compiled files:
 
     rm -rf target/public
+
+## Tests
+
+Build a production version of re-find.web:
+
+    script/build
+
+This will write some files to the `/tmp/re-find.web` directory.
+
+If you haven't, [install the drivers to automate your
+browsers](https://github.com/igrishaev/etaoin#installing-drivers) (currently
+only Chrome is used in the tests, probably more to come).
+
+Now start the browser tests:
+
+    SERVE=/tmp/re-find.web PORT=8000 clojure -A:browser-tests
 
 ## License
 
