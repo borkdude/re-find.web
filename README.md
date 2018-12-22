@@ -1,5 +1,7 @@
 # re-find.web
 
+[![CircleCI](https://circleci.com/gh/borkdude/re-find.web/tree/master.svg?style=svg)](https://circleci.com/gh/borkdude/re-find.web/tree/master)
+
 HTML interface to re-find hosted at [re-find.it](https://re-find.it).
 
 ## Development
