@@ -1,0 +1,33 @@
+version: 2
+jobs:
+  build:
+    docker:
+      # This Docker image contains a very old firefox and no geckodriver,
+      # due to Selenium compatibility. Since we don't use Selenium, we take
+      # care of installing a recent firefox and geckodriver (see below).
+      - image: circleci/clojure:lein-2.8.1-browsers
+    steps:
+      - checkout
+      
+      # We want to share the results of "lein deps" between runs.
+      # We assume that the maven cache can change only if "project.clj"
+      # changes (see the checksum in the name of the key below).
+      - restore_cache:
+          keys:
+            - m2-{{ checksum "deps.edn" }}
+      - run:
+          name: Install Clojure
+          command: |
+            curl -O https://download.clojure.org/install/linux-install-1.10.0.403.sh
+            chmod +x linux-install-1.10.0.403.sh
+            sudo ./linux-install-1.10.0.403.sh
+      - run:
+          name: Build project
+          command: script/build
+      - run:
+          name: Test project
+          command: SERVE=/tmp/re-find.web PORT=8000 clojure -A:browser-test
+      - save_cache:
+          key: m2-{{ checksum "deps.edn" }}
+          paths:
+            - ~/.m2

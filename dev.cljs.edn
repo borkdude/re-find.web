@@ -1,4 +1,4 @@
-^{:watch-dirs ["test" "src"]
+^{:watch-dirs ["src"]
   :css-dirs ["resources/public/css"]
-  :auto-testing true}
+  :auto-testing false}
 {:main re-find.web}

@@ -8,7 +8,11 @@ commit=$(git rev-parse --short=16 HEAD)
 if [ "$PREVIOUS" != "true" ]; then
     echo "Building re-find $commit"
     rm -rf out
-    clojure -A:local-deps:build-simple
+    if [ "$LOCAL_DEPS" = "true" ]; then
+        clojure -A:local-deps:build-simple
+    else
+        clojure -A:build-simple
+    fi
 fi
 
 echo "Preparing deploy folder"
@@ -18,14 +22,14 @@ cp out/main.js "/tmp/re-find.web/js/main-$commit.js"
 mkdir -p /tmp/re-find.web/css
 cp resources/public/css/style.css "/tmp/re-find.web/css/style-$commit.css"
 cp resources/public/prod.html /tmp/re-find.web/index.html
-sed -i -e "s/\$COMMIT/$commit/g" /tmp/re-find.web/index.html
-rm "/tmp/re-find.web/index.html-e"
+sed -i.bak "s/\$COMMIT/$commit/g" /tmp/re-find.web/index.html
+rm "/tmp/re-find.web/index.html.bak"
 
-if [ "$PREVIEW" != "true" ]; then
+if [ "$DEPLOY" = "true" ]; then
     echo "Copying to server"
     ssh borkdude@michielborkent.nl "rm -rf re-find.web; mkdir -p re-find.web"
     scp -r /tmp/re-find.web/* borkdude@eetvoorjeleven.nu:re-find.web
-else
+elif [ "$PREVIEW" = "true" ]; then
     echo "Previewing app"
     cd /tmp/re-find.web && python -m SimpleHTTPServer
 fi

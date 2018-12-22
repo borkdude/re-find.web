@@ -259,7 +259,7 @@
                                         nil)))
                               args-permutations)]
           (when (seq results)
-            [:table.table
+            [:table.table.results
              {:style {:opacity (if from-example? "0.4" "1")}}
              [:thead
               [:tr
@@ -280,7 +280,7 @@
   (let [{:keys [:args :ret :exact-ret-match? :help :permutations?]} @app-state]
     (let [example-mode? (and (empty? args)
                              (empty? ret))]
-      [:div.container
+      [:div#re-find.container
        #_[:pre (pr-str @app-state)]
        [:div.jumbotron
         [:h3 "Welcome to re-find"]]
@@ -362,12 +362,8 @@
         [:div.col-12
          [search-results]]]])))
 
-(defn page []
-  [:div.page
-   [app]])
-
 (defn mount [el]
-  (r/render-component [page] el))
+  (r/render-component [app] el))
 
 (defn mount-app-element []
   (when-let [el (js/document.getElementById "app")]
