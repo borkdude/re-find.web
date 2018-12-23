@@ -31,6 +31,16 @@ To co-develop integration tests while developing:
 
     PORT=9500 clojure -A:test:cider-nrepl
 
+The `cider-nrepl` alias is coming from my `~/.clojure/deps.edn`:
+
+```
+:cider-nrepl {:extra-deps {nrepl/nrepl {:mvn/version "0.4.5"}
+                                      refactor-nrepl {:mvn/version "2.4.0"}
+                                      cider/cider-nrepl {:mvn/version "0.18.0"}}
+                         :main-opts ["-m" "nrepl.cmdline" "--middleware"
+                         "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]}
+```
+
 ## Tests
 
 Build a production version of re-find.web:

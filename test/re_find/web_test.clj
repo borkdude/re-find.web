@@ -5,7 +5,8 @@
    [clojure.string :as str]
    [clojure.test :as t :refer [is deftest run-tests]]
    [re-find.jsoup :as jsoup]
-   [clojure.set :as set]))
+   [clojure.set :as set]
+   [clojure.java.io :as io]))
 
 (defonce server (atom nil))
 (defonce driver (atom nil))
@@ -15,6 +16,8 @@
 (def serve (System/getenv "SERVE"))
 
 (def base-url (str "http://localhost:" port))
+
+(def pm-opt {:dir "out/screenshots"})
 
 (defn format-query-string [s]
   (java.net.URLEncoder/encode
@@ -40,21 +43,21 @@
                   (format "return document.querySelector('%s').outerHTML" css)))
 
 (defn test-table [example expected-syms]
-  (let [link (link-from-example example)]
-    (eta/go @driver link)
-    (is (= (:args example)
-           (eta/get-element-value @driver {:css "#args"})))
-    (eta/wait-exists @driver {:css "table.results"})
-    (Thread/sleep 1000) ;; FIXME
-    (let [html (get-outer-html @driver "#re-find .results")
-          trs (jsoup/select (jsoup/parse html) "tr")
-          texts (partition-all
-                 3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
-          syms-displayed (set (map first texts))
-          args-displayed (set (map second texts))]
-      (is (set/subset? expected-syms syms-displayed))
-      (is (= 1 (count args-displayed)))
-      (is (= (:args example) (first args-displayed))))))
+  (eta/with-postmortem @driver pm-opt
+    (let [link (link-from-example example)]
+      (eta/go @driver link)
+      (is (= (:args example)
+             (eta/get-element-value @driver {:css "#args"})))
+      (eta/wait-exists @driver {:css "#re-find .results:not(.example)"})
+      (let [html (get-outer-html @driver "#re-find .results")
+            trs (jsoup/select (jsoup/parse html) "tr")
+            texts (partition-all
+                   3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
+            syms-displayed (set (map first texts))
+            args-displayed (set (map second texts))]
+        (is (set/subset? expected-syms syms-displayed))
+        (is (= 1 (count args-displayed)))
+        (is (= (:args example) (first args-displayed)))))))
 
 (deftest only-args-test
   (test-table {:args "\">>> re-find <<<\" #\"re-find\""} #{"str" "=" "get"}))
@@ -75,14 +78,17 @@
 
 (t/use-fixtures :once
   (fn [f]
+    (io/make-parents (io/file "out" "screenshots" "."))
     (start-server)
     (reset! driver (eta/chrome))
     (eta/go @driver base-url)
     (f)
+    (eta/quit @driver)
     (stop-server)))
 
 ;;;; Scratch
 
-(comment
+(comment  
   (only-args-test)
+  (t/run-tests)
   )
