@@ -260,10 +260,7 @@
                               args-permutations)]
           (when (seq results)
             [:table.table.results
-             {:class (if from-example?
-                       "results-example"
-                       "results")
-              :style {:opacity (if from-example? "0.4" "1")}}
+             {:class (when from-example? "example")}
              [:thead
               [:tr
                [:th "function"]
@@ -330,7 +327,7 @@
                            :spell-check "false"}]
             nbsp
             [:label.col-form-label
-             {:style {:opacity (if perms-disabled? "0.4" "1")}}
+             {:class (when perms-disabled? "disabled")}
              "include permutations?"]])]
         (when help args-help)
         [:div.form-group.row
@@ -357,7 +354,7 @@
                            :on-change (fn [])}]
             nbsp
             [:label.col-form-label
-             {:style {:opacity (if exact-disabled? "0.4" "1")}}
+             {:class (when exact-disabled? "disabled")}
              "exact match?"]])]
         (when help
           returns-help)]

@@ -6,6 +6,7 @@ jobs:
       # due to Selenium compatibility. Since we don't use Selenium, we take
       # care of installing a recent firefox and geckodriver (see below).
       - image: circleci/clojure:lein-2.8.1-browsers
+
     steps:
       - checkout
       
@@ -27,6 +28,9 @@ jobs:
       - run:
           name: Test project
           command: SERVE=/tmp/re-find.web PORT=8000 clojure -A:test
+      - store_artifacts:
+          path: out/screenshots
+          destination: screenshots
       - save_cache:
           key: m2-{{ checksum "deps.edn" }}
           paths:
