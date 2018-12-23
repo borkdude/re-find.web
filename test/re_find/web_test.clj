@@ -3,7 +3,9 @@
    [leiningen.simpleton :as simpleton]
    [etaoin.api :as eta]
    [clojure.string :as str]
-   [clojure.test :as t :refer [is deftest run-tests]]))
+   [clojure.test :as t :refer [is deftest run-tests]]
+   [re-find.jsoup :as jsoup]
+   [clojure.set :as set]))
 
 (defonce server (atom nil))
 (defonce driver (atom nil))
@@ -33,18 +35,32 @@
         (str/replace #"\(" "%28")
         (str/replace #"\)" "%29"))))
 
-(defn get-inner-html [driver css]
+(defn get-outer-html [driver css]
   (eta/js-execute driver
-                  (format "return document.querySelector('%s').innerHTML" css)))
+                  (format "return document.querySelector('%s').outerHTML" css)))
 
-(deftest only-args-test
-  (let [example {:args "\">>> re-find <<<\" #\"re-find\""}
-        link (link-from-example example)]
+(defn test-table [example expected-syms]
+  (let [link (link-from-example example)]
     (eta/go @driver link)
     (is (= (:args example)
            (eta/get-element-value @driver {:css "#args"})))
     (eta/wait-exists @driver {:css "table.results"})
-    (is (not (empty? (get-inner-html @driver "#re-find .results"))))))
+    (Thread/sleep 1000) ;; FIXME
+    (let [html (get-outer-html @driver "#re-find .results")
+          trs (jsoup/select (jsoup/parse html) "tr")
+          texts (partition-all
+                 3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
+          syms-displayed (set (map first texts))
+          args-displayed (set (map second texts))]
+      (is (set/subset? expected-syms syms-displayed))
+      (is (= 1 (count args-displayed)))
+      (is (= (:args example) (first args-displayed))))))
+
+(deftest only-args-test
+  (test-table {:args "\">>> re-find <<<\" #\"re-find\""} #{"str" "=" "get"}))
+
+(deftest nil-arg-test
+  (test-table {:args "nil" :ret "boolean?"} #{"some?" "="}))
 
 (defn stop-server []
   (when-let [s @server]
