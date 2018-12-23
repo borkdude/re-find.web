@@ -27,6 +27,10 @@ To clean all compiled files:
 
     rm -rf target/public
 
+To co-develop integration tests while developing:
+
+    PORT=9500 clojure -A:test:cider-nrepl
+
 ## Tests
 
 Build a production version of re-find.web:
@@ -41,7 +45,7 @@ only Chrome is used in the tests, probably more to come).
 
 Now start the browser tests:
 
-    SERVE=/tmp/re-find.web PORT=8000 clojure -A:browser-tests
+    SERVE=/tmp/re-find.web PORT=8000 clojure -A:test
 
 ## License
 

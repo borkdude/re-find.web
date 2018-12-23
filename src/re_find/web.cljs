@@ -8,7 +8,7 @@
    [re-find.core :as re-find]
    [reagent.core :as r]
    [speculative.instrument] ;; loads all specs
-)
+   )
   (:import [goog Uri]))
 
 (defprotocol ToFinite
@@ -232,12 +232,12 @@
             [exact-ret-match? permutations?])]
       (when (and (not= ::invalid args*)
                  (not= ::invalid ret*))
-        (let [args-strs (read-string (if from-example? (:args @example-state) args))
-              args-strs-permutations (if permutations? (permutations args-strs) [args-strs]) 
+        (let [args-read (read-string (if from-example? (:args @example-state) args))
+              args-read-permutations (if permutations? (permutations args-read) [args-read])
               args-permutations* (if permutations? (permutations args*) [args*])
               args-permutations (map (fn [args args-strs]
                                        {:args args :args-strs args-strs})
-                                     args-permutations* args-strs-permutations)
+                                     args-permutations* args-read-permutations)
               results (mapcat #(let [find-args (cond-> {}
                                                  (and args*
                                                       (not= args* ::invalid))
@@ -260,7 +260,10 @@
                               args-permutations)]
           (when (seq results)
             [:table.table.results
-             {:style {:opacity (if from-example? "0.4" "1")}}
+             {:class (if from-example?
+                       "results-example"
+                       "results")
+              :style {:opacity (if from-example? "0.4" "1")}}
              [:thead
               [:tr
                [:th "function"]
@@ -273,7 +276,7 @@
                    ^{:key (pr-str (show-sym sym) "-" (pr-str args))}
                    [:tr
                     [:td (show-sym sym)]
-                    [:td (str/join " " args-strs)]
+                    [:td (str/join " " (map pr-str args-strs))]
                     [:td (pr-str ret-val)]])))]]))))))
 
 (defn app []
