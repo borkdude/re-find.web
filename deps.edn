@@ -1,9 +1,11 @@
 {:deps {org.clojure/clojure {:mvn/version "1.10.0"}
         org.clojure/clojurescript {:mvn/version "1.10.439"}
         reagent {:mvn/version "0.8.1"}
-        re-find {:mvn/version "0.0.1-SNAPSHOT"}
+        re-find {:git/url "https://github.com/borkdude/re-find"
+                 :sha "b8ca0972de8f087a92eaacadadb2e9e9283fefec"}
         org.clojure/test.check {:mvn/version "0.9.0"}
-        speculative {:mvn/version "0.0.3-SNAPSHOT"}}
+        speculative {:git/url "https://github.com/slipset/speculative"
+                     :sha "5777f423c514c31f3f751a3a99c38b5a3e36f50a"}}
  :paths ["src" "resources"]
  :aliases {:local-deps {:extra-deps {speculative {:local/root "../speculative"}
                                      re-find {:local/root "../re-find"}}}
