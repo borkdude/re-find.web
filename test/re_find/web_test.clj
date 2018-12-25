@@ -23,12 +23,16 @@
   (java.net.URLEncoder/encode
    (str/join " " (str/split (str/trim s) #"\s+"))))
 
+(defn args->str [args-vec]
+  (str/join " " (map pr-str args-vec)))
+
 (defn link-from-example [{:keys [:args :ret :exact-ret-match? :permutations?]}]
-  (let [qs (if (and (str/blank? ret)
-                    (str/blank? args)) nil
+  (let [args-str (args->str args)
+        qs (if (and (str/blank? ret)
+                    (str/blank? args-str)) nil
                (str/join "&"
                          (filter identity
-                                 [(when (not-empty args) (str "args=" (format-query-string args)))
+                                 [(when (not-empty args-str) (str "args=" (format-query-string args-str)))
                                   (when (not-empty ret) (str "ret=" (format-query-string ret)))
                                   (when (true? exact-ret-match?)
                                     (str "exact=" exact-ret-match?))
@@ -42,28 +46,50 @@
   (eta/js-execute driver
                   (format "return document.querySelector('%s').outerHTML" css)))
 
-(defn test-table [example expected-syms]
+(defn permutations [s]
+  (lazy-seq
+   (if (seq (rest s))
+     (apply concat
+            (for [x s]
+              (map #(cons x %) (permutations (remove #{x} s)))))
+     [s])))
+
+(defn test-table [example expected-syms expected-permutation-syms]
   (eta/with-postmortem @driver pm-opt
-    (let [link (link-from-example example)]
+    (let [args-str (args->str (:args example))
+          link (link-from-example example)]
       (eta/go @driver link)
-      (is (= (:args example)
+      (is (= args-str
              (eta/get-element-value @driver {:css "#args"})))
       (eta/wait-exists @driver {:css "#re-find .results:not(.example)"})
-      (let [html (get-outer-html @driver "#re-find .results")
-            trs (jsoup/select (jsoup/parse html) "tr")
-            texts (partition-all
-                   3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
-            syms-displayed (set (map first texts))
-            args-displayed (set (map second texts))]
-        (is (set/subset? expected-syms syms-displayed))
-        (is (= 1 (count args-displayed)))
-        (is (= (:args example) (first args-displayed)))))))
+      (let [html (get-outer-html @driver "#re-find .results")]
+        ;; expected-syms
+        (let [trs (jsoup/select (jsoup/parse html) "tr:not(.permutation):not(.duplicate)")
+              texts (partition-all
+                     3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
+              syms-displayed (set (map first texts))
+              args-displayed (set (map second texts))]
+          (is (set/subset? expected-syms syms-displayed))
+          (is (= 1 (count args-displayed)))
+          (is (= args-str (first args-displayed))))
+        ;; expected-permutation-syms
+        (let [args-permutations (set (map args->str (permutations (:args example))))
+              trs (jsoup/select (jsoup/parse html) "tr.permutation")
+              texts (partition-all
+                     3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
+              syms-displayed (set (map first texts))
+              args-displayed (set (map second texts))]
+          (is (set/subset? args-displayed args-permutations))
+          (is (set/subset? expected-permutation-syms syms-displayed)))))))
 
 (deftest only-args-test
-  (test-table {:args "\">>> re-find <<<\" #\"re-find\""} #{"str" "=" "get"}))
+  (test-table {:args '[">>> re-find <<<" #"re-find"]} #{"str" "=" "get"} #{}))
 
 (deftest nil-arg-test
-  (test-table {:args "nil" :ret "boolean?"} #{"some?" "="}))
+  (test-table {:args '["nil"] :ret "boolean?"} #{"some?" "="} #{}))
+
+(deftest empty-arg-test
+  (test-table {:args '[] :ret "coll?"} #{"into" "conj" "clojure.set/union" "range"} #{}))
 
 (defn stop-server []
   (when-let [s @server]
@@ -88,7 +114,7 @@
 
 ;;;; Scratch
 
-(comment  
+(comment
   (only-args-test)
   (t/run-tests)
   )
