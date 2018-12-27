@@ -314,7 +314,7 @@
                                             nil)) results)
                             :else results)
               results (map (fn [m]
-                             (if (or ret-pred (= (first ret*) (:ret-val m)))
+                             (if (or (nil? ret*) ret-pred (= (first ret*) (:ret-val m)))
                                (assoc m :non-exact? false)
                                (assoc m :non-exact? true)))
                            results)]
