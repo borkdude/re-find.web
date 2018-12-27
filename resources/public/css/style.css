@@ -88,12 +88,20 @@ body {
 
 @media (min-width: 992px) {
   .label {
-    flex: 0 0 13%;
+    flex: 0 0 12%;
   }
-
-
   .field {
-    flex: 0 0 87%;
-    max-width: 87%;
+    flex: 0 0 88%;
+    max-width: 88%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .label {
+    flex: 0 0 10%;
+  }
+  .field {
+    flex: 0 0 90%;
+    max-width: 90%;
   }
 }
