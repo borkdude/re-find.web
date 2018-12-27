@@ -406,39 +406,21 @@
       [:div.form-group.row
        {:style {:cursor "default"}
         :on-click #(swap! app-state update :help not)}
-       [:div.col-2 "Show help"]
-       [:div.col-10
+       ;; col-$ is for small devices like iphone
+       ;; col-md-$ is for screens like laptops with minimum 992 px
+       [:label.label.col-md-2.col-4 "Show help"]
+       [:div.field.col-md-10.col-8
         [:input {:type "checkbox"
                  :checked help}]]]
       (when help args-help)
       [:div.form-group.row
-       [:div.col ]]
-      [:div.form-group.row
-       [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
-       [:div.col-md-10.col-sm-9
+       [:label.label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
+       [:div.field.col-md-10.col-sm-9
         [editor "args" [:args]]]]
       [:div.form-group.row
-       [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
-       [:div.col-md-10.col-sm-9
-        [editor "ret" [:ret]]]
-       #_(let [exact-disabled? (or no-args?
-                                   (str/blank? (str/trim ret)))]
-           [:div.col-md-3.col-sm-4
-            {:style {:cursor "default"}
-             :on-click #(when-not exact-disabled?
-                          (swap! app-state update :exact-ret-match? not)
-                          (swap! delayed-state update :exact-ret-match? not))}
-            [:input#exact {:type "checkbox"
-                           :disabled exact-disabled?
-                           :checked (boolean
-                                     (if-not example-mode?
-                                       exact-ret-match?
-                                       (:exact-ret-match? @example-state)))
-                           :on-change (fn [])}]
-            nbsp
-            [:label.col-form-label
-             {:class (when exact-disabled? "disabled")}
-             "exact match?"]])]
+       [:label.label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
+       [:div.field.col-md-10.col-sm-9
+        [editor "ret" [:ret]]]]
       (when help
         returns-help)]
      [:div.row
