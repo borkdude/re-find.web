@@ -167,7 +167,8 @@
 
 (defn sync-editor-placeholders []
   (let [{:keys [:args :ret]} @example-state]
-    (set-editor-placeholder! [:args] args)))
+    (set-editor-placeholder! [:args] args)
+    (set-editor-placeholder! [:ret] ret)))
 
 (r/track! sync-editor-placeholders)
 
@@ -285,30 +286,45 @@
               args? (and args*
                          (not= args* ::invalid)
                          (some? args*))
+              ret-pred (when (fn? (first ret*))
+                         (first ret*))
               match-args (cond-> {:printable-args printable-args
                                   :permutations? true}
                            args?
                            (assoc :args args*)
                            (and
+                            (not ret-pred)
                             ret*
                             (not= ret* ::invalid)
                             (do #_(prn "RET" ret*) true))
                            (assoc :ret (first ret*))
-                           (and args*
+                           (and (not ret-pred)
+                                args*
                                 ret*
                                 exact-ret-match?)
                            (assoc :exact-ret-match? true))
               results (try (mapply re-find/match match-args)
                            (catch :default e
                              (.error js/console e)
-                             nil))]
+                             nil))
+              results (cond ret-pred
+                            (filter #(try (ret-pred (to-finite (:ret-val %)))
+                                          (catch :default e
+                                            (.error js/console e)
+                                            nil)) results)
+                            :else results)
+              results (map (fn [m]
+                             (if (or ret-pred (= (first ret*) (:ret-val m)))
+                               (assoc m :non-exact? false)
+                               (assoc m :non-exact? true)))
+                           results)]
           (when (seq results)
             (let [no-perm-syms (set (keep #(when (not (:permutation? %))
                                              (:sym %)) results))
                   results (map #(if (:permutation? %)
                                   (assoc % :duplicate? (contains? no-perm-syms (:sym %)))
                                   %) results)
-                  results (sort-by (juxt :permutation? :duplicate?) results)]
+                  results (sort-by (juxt :non-exact? :permutation? :duplicate?) results)]
               [:table.table.results
                {:class (when from-example? "example")}
                [:thead
@@ -318,11 +334,14 @@
                  [:th (if args? "return value" ":ret spec")]]]
                [:tbody.mono
                 (doall
-                 (for [{:keys [:printable-args :sym :ret-val :permutation? :duplicate? :ret-spec] :as r}
+                 (for [{:keys [:printable-args :sym :ret-val
+                               :permutation? :duplicate? :ret-spec
+                               :non-exact?] :as r}
                        results]
                    ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
                    [:tr {:class [(when duplicate? "duplicate")
-                                 (when permutation? "permutation")]}
+                                 (when permutation? "permutation")
+                                 (when non-exact? "non-exact")]}
                     [:td [highlight (show-sym sym)]]
                     (when args? [:td [highlight (str/join " " (map pr-str printable-args))]])
                     [:td [highlight
@@ -392,13 +411,13 @@
        [:div.col ]]
       [:div.form-group.row
        [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
-       [:div.col-md-7.col-sm-6
+       [:div.col-md-10.col-sm-9
         [editor "args" [:args]]]]
       [:div.form-group.row
        [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
-       [:div.col-md-7.col-sm-6
+       [:div.col-md-10.col-sm-9
         [editor "ret" [:ret]]]
-       (let [exact-disabled? (or no-args?
+       #_(let [exact-disabled? (or no-args?
                                  (str/blank? (str/trim ret)))]
          [:div.col-md-3.col-sm-4
           {:style {:cursor "default"}
