@@ -389,6 +389,13 @@
         ;; toTextArea will destroy and clean up cm
         (.toTextArea cm)))}))
 
+;; https://www.w3schools.com/bootstrap4/bootstrap_grid_system.asp
+;; .col- (extra small devices - screen width less than 576px)
+;; .col-sm- (small devices - screen width equal to or greater than 576px)
+;; .col-md- (medium devices - screen width equal to or greater than 768px)
+;; .col-lg- (large devices - screen width equal to or greater than 992px)
+;; .col-xl- (xlarge devices - screen width equal to or greater than 1200px)
+
 (defn app []
   (let [{:keys [:args :ret :exact-ret-match?
                 :help :permutations? :no-args?]} @app-state
