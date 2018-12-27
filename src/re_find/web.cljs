@@ -229,6 +229,36 @@
     (take-while #(not= ::eof %)
                 (repeatedly #(reader/read {:eof ::eof} r)))))
 
+(defn highlight* [cm-ref text]
+  (r/create-class
+   {:render (fn [] [:textarea
+                    {:type "text"
+                     :default-value text
+                     :auto-complete "off"}])
+    :component-did-mount
+    (fn [this]
+      (let [opts #js {:mode "clojure"
+                      :readOnly true}
+            cm (.fromTextArea js/CodeMirror
+                              (r/dom-node this)
+                              opts)]
+        (vreset! cm-ref cm)))}))
+
+(defn highlight [text]
+  (let [cm-ref (volatile! nil)]
+    (r/create-class
+     {:render (fn [] [:div.cm-s-default [highlight* cm-ref text]])
+      :component-did-mount
+      (fn [this]
+        (let [dn (r/dom-node this)
+              lines (.-firstChild (.querySelector dn ".CodeMirror-line"))
+              lines (.cloneNode lines true)]
+          ;; toTextArea will destroy and clean up cm
+          (.toTextArea @cm-ref)
+          (while (.-firstChild dn)
+            (.removeChild dn (.-firstChild dn)))
+          (.prepend dn lines)))})))
+
 (defn search-results []
   (binding [*print-length* 10]
     (let [{:keys [:args :ret :exact-ret-match? :permutations? :no-args?]}
@@ -293,10 +323,11 @@
                    ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
                    [:tr {:class [(when duplicate? "duplicate")
                                  (when permutation? "permutation")]}
-                    [:td (show-sym sym)]
-                    (when args? [:td (str/join " " (map pr-str printable-args))])
-                    [:td (if args? (pr-str ret-val)
-                             (pr-str (s/form ret-spec)))]]))]])))))))
+                    [:td [highlight (show-sym sym)]]
+                    (when args? [:td [highlight (str/join " " (map pr-str printable-args))]])
+                    [:td [highlight
+                          (if args? (pr-str ret-val)
+                              (pr-str (s/form ret-spec)))]]]))]])))))))
 
 (defn editor [id path]
   (r/create-class
@@ -328,7 +359,12 @@
                (let [v (.getValue x)]
                  (swap! app-state assoc-in path v))))
         (js/parinferCodeMirror.init cm)
-        (swap! editors assoc-in path cm)))}))
+        (swap! editors assoc-in path cm)))
+    :component-will-unmount
+    (fn []
+      (let [cm (get-in @editors path)]
+        ;; toTextArea will destroy and clean up cm
+        (.toTextArea cm)))}))
 
 (defn app []
   (let [{:keys [:args :ret :exact-ret-match?
