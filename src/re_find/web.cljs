@@ -3,11 +3,17 @@
    [cljs.js :as cljs]
    [cljs.tools.reader :as reader]
    [cljs.tools.reader.reader-types :refer [string-push-back-reader]]
+   [cljsjs.codemirror]
+   [cljsjs.codemirror.addon.display.placeholder]
+   [cljsjs.codemirror.addon.edit.matchbrackets]
+   [cljsjs.codemirror.mode.clojure]
+   [cljsjs.parinfer]
+   [cljsjs.parinfer-codemirror]
+   [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [goog.functions :as functions]
    [re-find.core :as re-find]
    [reagent.core :as r]
-   [clojure.spec.alpha :as s]
    [speculative.instrument] ;; loads all specs
    )
   (:import [goog Uri]))
@@ -153,6 +159,18 @@
 
 (r/track! sync-delayed-state!)
 
+(defonce editors (atom {}))
+
+(defn set-editor-placeholder! [path text]
+  (when-let [cm (get-in @editors path)]
+    (.setOption cm "placeholder" text)))
+
+(defn sync-editor-placeholders []
+  (let [{:keys [:args :ret]} @example-state]
+    (set-editor-placeholder! [:args] args)))
+
+(r/track! sync-editor-placeholders)
+
 (defn rotate-examples! [examples]
   (if (and (empty? (:args @app-state))
            (empty? (:ret @app-state)))
@@ -160,7 +178,8 @@
         (js/setTimeout #(rotate-examples! (rest examples)) 10000))
     (js/setTimeout #(rotate-examples! examples) 10000)))
 
-(rotate-examples! (cycle (shuffle examples)))
+(defonce do-rotate
+  (rotate-examples! (cycle (shuffle examples))))
 
 (defn format-query-string [s]
   (str/join " " (str/split (str/trim s) #"\s+")))
@@ -279,49 +298,72 @@
                     [:td (if args? (pr-str ret-val)
                              (pr-str (s/form ret-spec)))]]))]])))))))
 
+(defn editor [id path]
+  (r/create-class
+   {:render (fn [] [:textarea
+                    {:type "text"
+                     :id id
+                     :default-value (get-in @app-state path)
+                     :auto-complete "off"
+                     :placeholder (get-in @example-state path)}])
+    :component-did-mount
+    (fn [this]
+      (let [opts #js {:mode "clojure"
+                      :matchBrackets true
+                      ;;parinfer does this better
+                      ;;:autoCloseBrackets true
+                      :lineNumbers false}
+            cm (.fromTextArea js/CodeMirror
+                              (r/dom-node this)
+                              opts)]
+        (.on cm "beforeChange"
+             (fn [instance change]
+               (let [new-text (.join (.-text change) "")
+                     new-text (str/join "" (str/split-lines new-text))
+                     new-text (str/replace new-text #"\t" "")]
+                 (.update change (.-from change) (.-to change) #js [new-text])
+                 true)))
+        (.on cm "change"
+             (fn [x]
+               (let [v (.getValue x)]
+                 (swap! app-state assoc-in path v))))
+        (js/parinferCodeMirror.init cm)
+        (swap! editors assoc-in path cm)))}))
+
 (defn app []
   (let [{:keys [:args :ret :exact-ret-match?
                 :help :permutations? :no-args?]} @app-state
         example-mode? (and (empty? args)
                            (empty? ret))]
-    
     [:div#re-find.container
      [:div.row
       [:p.col-12.lead
        [:span
         "To find Clojure functions, start typing arguments and/or a return
          value/predicate."]]]
-     general-help
+     [:div.row
+      [:div.col-12 general-help]]
      [:form
       [:div.form-group.row
        {:style {:cursor "default"}
         :on-click #(swap! app-state update :help not)}
        [:div.col-2 "Show help"]
        [:div.col-10
-        [:input#exact {:type "checkbox"
-                       :checked help
-                       :auto-complete "off"
-                       :auto-correct "off"
-                       :auto-capitalize "off"
-                       :spell-check "false"}]]]
+        [:input {:type "checkbox"
+                 :checked help}]]]
+      (when help args-help)
+      [:div.form-group.row
+       [:div.col ]]
       [:div.form-group.row
        [:label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
        [:div.col-md-7.col-sm-6
-        [:input#args.form-control.mono
-         {:placeholder (:args @example-state)
-          :value args
-          :on-change #(swap! app-state assoc :args (.. % -target -value))}]]]
-      (when help args-help)
+        [editor "args" [:args]]]]
       [:div.form-group.row
        [:label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
        [:div.col-md-7.col-sm-6
-        [:input#ret.form-control.mono
-         {:placeholder (:ret @example-state)
-          :value ret
-          :on-change #(swap! app-state assoc :ret (.. % -target -value))}]]
-       (let [exact-disabled? (or
-                              no-args? #_(str/blank? (str/trim args))
-                              (str/blank? (str/trim ret)))]
+        [editor "ret" [:ret]]]
+       (let [exact-disabled? (or no-args?
+                                 (str/blank? (str/trim ret)))]
          [:div.col-md-3.col-sm-4
           {:style {:cursor "default"}
            :on-click #(when-not exact-disabled?
