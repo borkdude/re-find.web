@@ -67,6 +67,38 @@
 
 (def nbsp "\u00a0")
 
+(defn highlight* [cm-ref text]
+  (r/create-class
+   {:render (fn [] [:textarea
+                    {:class "mono"
+                     :type "text"
+                     :default-value text
+                     :auto-complete "off"}])
+    :component-did-mount
+    (fn [this]
+      (let [opts #js {:mode "clojure"
+                      :readOnly true}
+            cm (.fromTextArea js/CodeMirror
+                              (r/dom-node this)
+                              opts)]
+        (vreset! cm-ref cm)))}))
+
+(defn highlight [text]
+  (let [cm-ref (volatile! nil)]
+    (r/create-class
+     {:render (fn [] [:div.cm-s-default.mono.inline
+                      [highlight* cm-ref text]])
+      :component-did-mount
+      (fn [this]
+        (let [dn (r/dom-node this)
+              lines (.-firstChild (.querySelector dn ".CodeMirror-line"))
+              lines (.cloneNode lines true)]
+          ;; toTextArea will destroy and clean up cm
+          (.toTextArea @cm-ref)
+          (while (.-firstChild dn)
+            (.removeChild dn (.-firstChild dn)))
+          (.prepend dn lines)))})))
+
 (def general-help
   [:div.help
    [:div.row
@@ -83,35 +115,36 @@
 (def args-help
   [:div.help
    [:div.row
-    [:p.col-12 "The arguments are matched against the " [:span.mono ":args"] "
-    spec. For matching on no arguments, the special
-    value " [:span.mono "#_empty"] " can be used."]]
+    [:p.col-12 "The arguments are matched against the " [highlight ":args"] "
+    spec."]]
    [:div.row
-    [:p.col-12 "Example: " [:span.mono "inc [1 2 3]"] ". This matches when the
+    [:p.col-12 "Example input: " [highlight "inc [1 2 3]"] ". This matches when the
     first argument can be a function and the second argument a vector of
     numbers."]]
    [:div.row
-    [:p.col-12 "Example: "[:span.mono "#{1 2 3} #{4 5 6}"] ". This matches when
+    [:p.col-12 "Example input: " [highlight "#{1 2 3} #{4 5 6}"] ". This matches when
             the first and second argument can be a set, or more generally, a
             collection of numbers."]]])
 
 (def returns-help
   [:div.help
    [:div.row
-    [:p.col-12 "When value is not a function, it is matched against
-            the " [:span.mono ":ret"] " spec. When value is a function, it is
+    [:p.col-12 "When this field has a value that is not a function, it is
+            matched against the " [:span.mono ":ret"] " spec. When a return
+            value equals this field, the function is shown first,
+            followed by non-exact matches. When this field has a function, it is
             used as a predicate for checking the return value."]]
    [:div.row
-    [:p.col-12 "Example: " [:span.mono "\"message\""] ". This matches when the
-            spec is " [:span.mono "seqable?"] " or " [:span.mono "string?"] ",
-            but not when the spec is " [:span.mono "int?"] "."]]
+    [:p.col-12 "Example input: " [highlight "\"message\""] ". This value is not a
+            function. This matches when the spec is
+            e.g. " [highlight "seqable?"] " or " [highlight "string?"] ", but
+            not when the spec is " [highlight "int?"] ". When the argument
+            is " [highlight "\"message\""] ", the function " [highlight "str"] "
+            is shown at the top, because " [highlight "(str \"message\")"] " equals
+            " [highlight "\"message\""] "."]]
    [:div.row
-    [:p.col-12 "Example:" nbsp [:span.mono "string?"] ". Only functions that
-    return a string are listed."]]
-   [:div.row
-    [:p.col-12 "When exact match is enabled, the return value of a function
-            applied to arguments must be equal to the given return value. This
-            option only has effect when arguments are provided."]]])
+    [:p.col-12 "Example:" nbsp [highlight "string?"] ". Only functions that
+    return a string with the given arguments are listed."]]])
 
 (def examples [{:args "\">>> re-find <<<\" #\"re-find\""
                 :ret "\"re-find\""
@@ -230,36 +263,6 @@
     (take-while #(not= ::eof %)
                 (repeatedly #(reader/read {:eof ::eof} r)))))
 
-(defn highlight* [cm-ref text]
-  (r/create-class
-   {:render (fn [] [:textarea
-                    {:type "text"
-                     :default-value text
-                     :auto-complete "off"}])
-    :component-did-mount
-    (fn [this]
-      (let [opts #js {:mode "clojure"
-                      :readOnly true}
-            cm (.fromTextArea js/CodeMirror
-                              (r/dom-node this)
-                              opts)]
-        (vreset! cm-ref cm)))}))
-
-(defn highlight [text]
-  (let [cm-ref (volatile! nil)]
-    (r/create-class
-     {:render (fn [] [:div.cm-s-default [highlight* cm-ref text]])
-      :component-did-mount
-      (fn [this]
-        (let [dn (r/dom-node this)
-              lines (.-firstChild (.querySelector dn ".CodeMirror-line"))
-              lines (.cloneNode lines true)]
-          ;; toTextArea will destroy and clean up cm
-          (.toTextArea @cm-ref)
-          (while (.-firstChild dn)
-            (.removeChild dn (.-firstChild dn)))
-          (.prepend dn lines)))})))
-
 (defn search-results []
   (binding [*print-length* 10]
     (let [{:keys [:args :ret :exact-ret-match? :permutations? :no-args?]}
@@ -332,7 +335,7 @@
                  [:th "function"]
                  (when args? [:th "arguments"])
                  [:th (if args? "return value" ":ret spec")]]]
-               [:tbody.mono
+               [:tbody
                 (doall
                  (for [{:keys [:printable-args :sym :ret-val
                                :permutation? :duplicate? :ret-spec
