@@ -368,16 +368,20 @@
                               opts)]
         (.on cm "beforeChange"
              (fn [instance change]
-               (let [new-text (.join (.-text change) "")
-                     new-text (str/join "" (str/split-lines new-text))
-                     new-text (str/replace new-text #"\t" "")]
-                 (.update change (.-from change) (.-to change) #js [new-text])
-                 true)))
+               (when (.-update change)
+                 (let [new-text (.join (.-text change) "")
+                       new-text (str/join "" (str/split-lines new-text))
+                       new-text (str/replace new-text #"\t" "")]
+                   (.update change (.-from change) (.-to change) #js [new-text])
+                   true))))
         (.on cm "change"
              (fn [x]
                (let [v (.getValue x)]
                  (swap! app-state assoc-in path v))))
         (js/parinferCodeMirror.init cm)
+        (.removeKeyMap cm)
+        (.setOption cm "extraKeys" #js {:Shift-Tab false
+                                        :Tab false})
         (swap! editors assoc-in path cm)))
     :component-will-unmount
     (fn []
@@ -418,23 +422,23 @@
        [:div.col-md-10.col-sm-9
         [editor "ret" [:ret]]]
        #_(let [exact-disabled? (or no-args?
-                                 (str/blank? (str/trim ret)))]
-         [:div.col-md-3.col-sm-4
-          {:style {:cursor "default"}
-           :on-click #(when-not exact-disabled?
-                        (swap! app-state update :exact-ret-match? not)
-                        (swap! delayed-state update :exact-ret-match? not))}
-          [:input#exact {:type "checkbox"
-                         :disabled exact-disabled?
-                         :checked (boolean
-                                   (if-not example-mode?
-                                     exact-ret-match?
-                                     (:exact-ret-match? @example-state)))
-                         :on-change (fn [])}]
-          nbsp
-          [:label.col-form-label
-           {:class (when exact-disabled? "disabled")}
-           "exact match?"]])]
+                                   (str/blank? (str/trim ret)))]
+           [:div.col-md-3.col-sm-4
+            {:style {:cursor "default"}
+             :on-click #(when-not exact-disabled?
+                          (swap! app-state update :exact-ret-match? not)
+                          (swap! delayed-state update :exact-ret-match? not))}
+            [:input#exact {:type "checkbox"
+                           :disabled exact-disabled?
+                           :checked (boolean
+                                     (if-not example-mode?
+                                       exact-ret-match?
+                                       (:exact-ret-match? @example-state)))
+                           :on-change (fn [])}]
+            nbsp
+            [:label.col-form-label
+             {:class (when exact-disabled? "disabled")}
+             "exact match?"]])]
       (when help
         returns-help)]
      [:div.row
