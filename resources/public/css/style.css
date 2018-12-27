@@ -5,7 +5,7 @@
 
 .form-control::placeholder { opacity: 0.4; }
 .form-control:-ms-input-placeholder { opacity: 0.4; }
-.example, .disabled, .duplicate, .CodeMirror-placeholder { opacity: 0.4; }
+.example, .disabled, .duplicate, .CodeMirror-placeholder, .non-exact { opacity: 0.4; }
 
 #re-find {
   margin: 2em;
