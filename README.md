@@ -35,10 +35,10 @@ The `cider-nrepl` alias is coming from my `~/.clojure/deps.edn`:
 
 ```
 :cider-nrepl {:extra-deps {nrepl/nrepl {:mvn/version "0.4.5"}
-                                      refactor-nrepl {:mvn/version "2.4.0"}
-                                      cider/cider-nrepl {:mvn/version "0.18.0"}}
-                         :main-opts ["-m" "nrepl.cmdline" "--middleware"
-                         "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]}
+                           refactor-nrepl {:mvn/version "2.4.0"}
+                           cider/cider-nrepl {:mvn/version "0.18.0"}}
+              :main-opts ["-m" "nrepl.cmdline" "--middleware"
+                          "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]}
 ```
 
 ## Tests
@@ -61,4 +61,4 @@ Now start the browser tests:
 
 Copyright © 2018 Michiel Borkent
 
-Distributed under the MIT License. See LICENSE in the root of this project.
+Distributed under the EPL License, same as Clojure. See LICENSE.
