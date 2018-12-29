@@ -263,6 +263,11 @@
     (take-while #(not= ::eof %)
                 (repeatedly #(reader/read {:eof ::eof} r)))))
 
+(defn type-score [v1 v2]
+  (cond (= (type v1) (type v2)) 1
+        (and (coll? v1) (coll? v2)) .8
+        :else 0))
+
 (defn search-results []
   (binding [*print-length* 10]
     (let [{:keys [:args :ret :exact-ret-match? :permutations? :no-args?]}
@@ -291,17 +296,17 @@
                          (some? args*))
               ret-pred (when (fn? (first ret*))
                          (first ret*))
+              ret-val (and ret*
+                           (not= ret* ::invalid)
+                           (not ret-pred)
+                           (first ret*))
               match-args (cond-> {:printable-args printable-args
                                   :permutations? true}
                            args?
                            (assoc :args args*)
-                           (and
-                            (not ret-pred)
-                            ret*
-                            (not= ret* ::invalid)
-                            (do #_(prn "RET" ret*) true))
-                           (assoc :ret (first ret*))
-                           (and (not ret-pred)
+                           (and ret* ret-val)
+                           (assoc :ret ret-val)
+                           false #_(and (not ret-pred)
                                 args*
                                 ret*
                                 exact-ret-match?)
@@ -317,9 +322,11 @@
                                             nil)) results)
                             :else results)
               results (map (fn [m]
-                             (if (or (nil? ret*) ret-pred (= (first ret*) (:ret-val m)))
-                               (assoc m :non-exact? false)
-                               (assoc m :non-exact? true)))
+                             (cond-> m
+                               (or (nil? ret*) ret-pred (= ret-val (:ret-val m)))
+                               (assoc :exact? true)
+                               (and ret* ret-val)
+                               (assoc :type-score (type-score ret-val (:ret-val m)))))
                            results)]
           (when (seq results)
             (let [no-perm-syms (set (keep #(when (not (:permutation? %))
@@ -327,7 +334,11 @@
                   results (map #(if (:permutation? %)
                                   (assoc % :duplicate? (contains? no-perm-syms (:sym %)))
                                   %) results)
-                  results (sort-by (juxt :non-exact? :permutation? :duplicate?) results)]
+                  results (sort-by (juxt :exact?
+                                         :type-score
+                                         (comp not :permutation?)
+                                         (comp not :duplicate?))
+                                   > results)]
               [:table.table.results
                {:class (when from-example? "example")}
                [:thead
@@ -339,12 +350,12 @@
                 (doall
                  (for [{:keys [:printable-args :sym :ret-val
                                :permutation? :duplicate? :ret-spec
-                               :non-exact?] :as r}
+                               :exact?] :as r}
                        results]
                    ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
                    [:tr {:class [(when duplicate? "duplicate")
                                  (when permutation? "permutation")
-                                 (when non-exact? "non-exact")]}
+                                 (when-not exact? "non-exact")]}
                     [:td [highlight (show-sym sym)]]
                     (when args? [:td [highlight (str/join " " (map pr-str printable-args))]])
                     [:td [highlight
