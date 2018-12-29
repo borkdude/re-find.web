@@ -182,7 +182,7 @@
 
 (defonce app-state (r/atom (merge init-state (state-from-query-params))))
 (defonce example-state (r/atom {}))
-(defonce delayed-state (r/atom init-state))
+(defonce delayed-state (r/atom @app-state))
 
 (defonce delayed-reset! (functions/debounce reset! 250))
 
