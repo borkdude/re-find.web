@@ -103,14 +103,14 @@
   [:div.help
    [:div.row
     [:p.col-12 "Re-find helps you find Clojure functions. It leverages specs provided by "
-     [:a {:href "https://github.com/slipset/speculative"} "speculative"] ". If
+     [:a {:href "https://github.com/borkdude/speculative"} "speculative"] ". If
       you are not finding the function you should be finding, it's either a bug
       in this app, or there is currently no spec for this function. Please
       report an issue about this at "
      [:a
       {:href "https://github.com/borkdude/re-find"} "re-find"]
      " or " [:a
-             {:href "https://github.com/slipset/speculative"} "speculative"] "."]]])
+             {:href "https://github.com/borkdude/speculative"} "speculative"] "."]]])
 
 (def args-help
   [:div.help
