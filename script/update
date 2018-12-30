@@ -1,0 +1,11 @@
+#!/bin/bash
+
+## https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
+set -Eeo pipefail
+
+git checkout -b updates
+clj -A:outdated --update
+git commit -am "updates"
+git push origin updates
+git checkout master
+git branch -D updates
