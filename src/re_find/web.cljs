@@ -86,7 +86,7 @@
 (defn highlight [text]
   (let [cm-ref (volatile! nil)]
     (r/create-class
-     {:render (fn [] [:div.cm-s-default.mono.inline
+     {:render (fn [] [:span.cm-s-default.mono.inline
                       [highlight* cm-ref text]])
       :component-did-mount
       (fn [this]
@@ -148,8 +148,10 @@
 
 (def examples [{:args "\">>> re-find <<<\" #\"re-find\""
                 :ret "\"re-find\""
-                :permutations? true
-                :exact-ret-match? true}
+                :more? true
+                ;;:permutations? true
+                ;;:exact-ret-match? true
+                }
                {:args "#{1 2 3} #{4 5 6}"
                 :ret "set?"}
                {:args "0 [1 2 3]"
@@ -157,12 +159,23 @@
                 :exact-ret-match? true}
                {:args "1" :ret "2" :exact-ret-match? true}
                {:args "odd? (range 10)"
-                :ret "map?"}])
+                :ret "map?"}
+               {:args "{:a 1 :b 2} [:a]"
+                :ret "{:a 1}"}
+               {:args "[1 [2 [3 [4] 5] 6] 7]"
+                :ret "[1 2 3 4 5 6 7]"}
+               {:args "{:a 1} {:b 2}"
+                :ret "{:a 1 :b 2}"}
+               {:args "{} [:a :b :c] :d"
+                :ret "{:a {:b {:c :d}}}"}
+               {:args "{:a nil :b nil} :a"
+                :ret "(MapEntry. :a nil)"}])
 
 (def init-state {:args ""
                  :ret ""
                  :exact-ret-match? nil
-                 :help false})
+                 :help? false
+                 :more? false})
 
 (defn state-from-query-params []
   (let [uri (-> js/window .-location .-href)
@@ -172,19 +185,21 @@
         returns (first (.getValues qd "ret"))
         exact? (first (.getValues qd "exact"))
         permutations? (first (.getValues qd "perms"))
-        no-args? (first (.getValues qd "no-args"))]
+        no-args? (first (.getValues qd "no-args"))
+        more? (first (.getValues qd "more"))]
     (cond-> {}
       args (assoc :args args)
       returns (assoc :ret returns)
       exact? (assoc :exact-ret-match? (= "true" exact?))
       permutations? (assoc :permutations? (= "true" permutations?))
-      no-args? (assoc :no-args? (= "true" no-args?)))))
+      no-args? (assoc :no-args? (= "true" no-args?))
+      more? (assoc :more? (= "true" more?)))))
 
 (defonce app-state (r/atom (merge init-state (state-from-query-params))))
 (defonce example-state (r/atom {}))
 (defonce delayed-state (r/atom @app-state))
 
-(defonce delayed-reset! (functions/debounce reset! 250))
+(defonce delayed-reset! (functions/debounce reset! 500))
 
 (defn sync-delayed-state! []
   (when (not= @delayed-state @app-state)
@@ -220,7 +235,8 @@
 
 (defn shareable-link [state]
   (let [uri (.parse Uri (.. js/window -location -href))
-        {:keys [:args :ret :exact-ret-match? :permutations? :no-args?]} state
+        {:keys [:args :ret :exact-ret-match? :permutations?
+                :no-args? :more?]} state
         qs (if (and (str/blank? ret)
                     (str/blank? args)) nil
                (str/join "&"
@@ -232,7 +248,9 @@
                                   (when (true? permutations?)
                                     (str "perms=" permutations?))
                                   (when (true? no-args?)
-                                    (str "no-args=" no-args?))])))
+                                    (str "no-args=" no-args?))
+                                  (when (true? more?)
+                                    (str "more=" more?))])))
         _ (.setQuery uri qs)]
     (-> (str uri)
         (str/replace #"\(" "%28")
@@ -240,8 +258,8 @@
 
 (defn sync-address-bar []
   (let [link (shareable-link @app-state)]
-    (when true #_(not= link (.. js/window -location -href))
-          (.replaceState js/window.history nil "" link))))
+    (when (not= link (.. js/window -location -href))
+      (.replaceState js/window.history nil "" link))))
 
 (r/track! sync-address-bar)
 
@@ -300,16 +318,19 @@
                            (not= ret* ::invalid)
                            (not ret-pred)
                            (first ret*))
-              match-args (cond-> {:printable-args printable-args
-                                  :permutations? true}
+              more? (if from-example?
+                      (:more? @example-state)
+                      (:more? @app-state))
+              match-args (cond-> {:printable-args printable-args}
+                           more? (assoc :permutations? true)
                            args?
                            (assoc :args args*)
                            (and ret* ret-val)
                            (assoc :ret ret-val)
-                           false #_(and (not ret-pred)
+                           (and (not ret-pred)
                                 args*
                                 ret*
-                                exact-ret-match?)
+                                (not more?))
                            (assoc :exact-ret-match? true))
               results (try (mapply re-find/match match-args)
                            (catch :default e
@@ -328,39 +349,44 @@
                                (and ret* ret-val)
                                (assoc :type-score (type-score ret-val (:ret-val m)))))
                            results)]
-          (when (seq results)
-            (let [no-perm-syms (set (keep #(when (not (:permutation? %))
-                                             (:sym %)) results))
-                  results (map #(if (:permutation? %)
-                                  (assoc % :duplicate? (contains? no-perm-syms (:sym %)))
-                                  %) results)
-                  results (sort-by (juxt :exact?
-                                         :type-score
-                                         (comp not :permutation?)
-                                         (comp not :duplicate?))
-                                   > results)]
-              [:table.table.results
-               {:class (when from-example? "example")}
-               [:thead
-                [:tr
-                 [:th "function"]
-                 (when args? [:th "arguments"])
-                 [:th (if args? "return value" ":ret spec")]]]
-               [:tbody
-                (doall
-                 (for [{:keys [:printable-args :sym :ret-val
-                               :permutation? :duplicate? :ret-spec
-                               :exact?] :as r}
-                       results]
-                   ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
-                   [:tr {:class [(when duplicate? "duplicate")
-                                 (when permutation? "permutation")
-                                 (when-not exact? "non-exact")]}
-                    [:td [highlight (show-sym sym)]]
-                    (when args? [:td [highlight (str/join " " (map pr-str printable-args))]])
-                    [:td [highlight
-                          (if args? (pr-str ret-val)
-                              (pr-str (s/form ret-spec)))]]]))]])))))))
+          (let [no-perm-syms (set (keep #(when (not (:permutation? %))
+                                           (:sym %)) results))
+                results (map #(if (:permutation? %)
+                                (assoc % :duplicate? (contains? no-perm-syms (:sym %)))
+                                %) results)
+                results (sort-by (juxt :exact?
+                                       :type-score
+                                       (comp not :permutation?)
+                                       (comp not :duplicate?))
+                                 > results)]
+            [:div {:class (when from-example? "example")}
+             (if (seq results)
+               [:table.table.results
+                [:thead
+                 [:tr
+                  [:th "function"]
+                  (when args? [:th "arguments"])
+                  [:th (if args? "return value" ":ret spec")]]]
+                [:tbody
+                 (doall
+                  (for [{:keys [:printable-args :sym :ret-val
+                                :permutation? :duplicate? :ret-spec
+                                :exact?] :as r}
+                        results]
+                    ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
+                    [:tr {:class [(when duplicate? "duplicate")
+                                  (when permutation? "permutation")
+                                  (when-not exact? "non-exact")]}
+                     [:td [highlight (show-sym sym)]]
+                     (when args? [:td [highlight (str/join " " (map pr-str printable-args))]])
+                     [:td [highlight
+                           (if args? (pr-str ret-val)
+                               (pr-str (s/form ret-spec)))]]]))]]
+               [:p "No results found."])
+             [:a {:href (when-not from-example? "#")
+                  :on-click (fn []
+                              (when-not from-example? (swap! app-state update :more? not)))}
+              (if more? "Show less\u2026" "Show more\u2026")]]))))))
 
 (defn editor [id path]
   (r/create-class
@@ -412,7 +438,7 @@
 
 (defn app []
   (let [{:keys [:args :ret :exact-ret-match?
-                :help :permutations? :no-args?]} @app-state
+                :help? :permutations? :no-args?]} @app-state
         example-mode? (and (empty? args)
                            (empty? ret))]
     [:div#re-find.container
@@ -426,14 +452,14 @@
      [:form
       [:div.form-group.row
        {:style {:cursor "default"}
-        :on-click #(swap! app-state update :help not)}
+        :on-click #(swap! app-state update :help? not)}
        ;; col-$ is for small devices like iphone
        ;; col-md-$ is for screens like laptops with minimum 992 px
        [:label.label.col-md-2.col-4 "Show help"]
        [:div.field.col-md-10.col-8
         [:input {:type "checkbox"
-                 :checked help}]]]
-      (when help args-help)
+                 :checked help?}]]]
+      (when help? args-help)
       [:div.form-group.row
        [:label.label.col-md-2.col-sm-3.col-form-label {:for "args"} "Arguments"]
        [:div.field.col-md-10.col-sm-9
@@ -442,7 +468,7 @@
        [:label.label.col-md-2.col-sm-3.col-form-label {:for "ret"} "Returns"]
        [:div.field.col-md-10.col-sm-9
         [editor "ret" [:ret]]]]
-      (when help
+      (when help?
         returns-help)]
      [:div.row
       [:div.col-12
