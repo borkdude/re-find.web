@@ -286,6 +286,18 @@
         (and (coll? v1) (coll? v2)) .8
         :else 0))
 
+(defn cd-encode [s]
+  (-> s
+      (str/replace #"/" "_fs")
+      (str/replace #"\\" "_bs")
+      (str/replace #"\?" "_q")))
+
+(defn clojuredocs-url [sym]
+  (let [base  "https://clojuredocs.org"
+        ns (str/replace (namespace sym) #"^cljs.core$" "clojure.core")
+        name (cd-encode (name sym))]
+    (str base "/" ns "/" name)))
+
 (defn search-results []
   (binding [*print-length* 10]
     (let [{:keys [:args :ret :exact-ret-match? :permutations? :no-args?]}
@@ -358,7 +370,8 @@
                                        :type-score
                                        (comp not :permutation?)
                                        (comp not :duplicate?))
-                                 > results)]
+                                 > results)
+                results (if more? results (take 5 results))]
             [:div {:class (when from-example? "example")}
              (if (seq results)
                [:table.table.results
@@ -377,7 +390,9 @@
                     [:tr {:class [(when duplicate? "duplicate")
                                   (when permutation? "permutation")
                                   (when-not exact? "non-exact")]}
-                     [:td [highlight (show-sym sym)]]
+                     [:td [:a {:href (clojuredocs-url sym)
+                               :target "_blank"}
+                           [highlight (show-sym sym)]]]
                      (when args? [:td [highlight (str/join " " (map pr-str printable-args))]])
                      [:td [highlight
                            (if args? (pr-str ret-val)
