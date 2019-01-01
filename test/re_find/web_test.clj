@@ -28,12 +28,13 @@
 
 (defn link-from-example [{:keys [:args :ret :exact-ret-match? :permutations?]}]
   (let [args-str (args->str args)
-        qs (if (and (str/blank? ret)
+        ret-str (when ret (pr-str ret))
+        qs (if (and (str/blank? ret-str)
                     (str/blank? args-str)) nil
                (str/join "&"
                          (filter identity
                                  [(when (not-empty args-str) (str "args=" (format-query-string args-str)))
-                                  (when (not-empty ret) (str "ret=" (format-query-string ret)))
+                                  (when (not-empty ret-str) (str "ret=" (format-query-string ret-str)))
                                   (when (true? exact-ret-match?)
                                     (str "exact=" exact-ret-match?))
                                   (when (true? permutations?)
@@ -57,6 +58,7 @@
 (defn test-table [example expected-syms expected-permutation-syms]
   (eta/with-postmortem @driver pm-opt
     (let [args-str (args->str (:args example))
+          ret-str (pr-str (:ret example))
           link (link-from-example example)]
       (eta/go @driver link)
       (is (= args-str
@@ -83,13 +85,16 @@
           (is (set/subset? expected-permutation-syms syms-displayed)))))))
 
 (deftest only-args-test
-  (test-table {:args '[">>> re-find <<<" #"re-find"]} #{"str" "=" "get"} #{}))
+  (test-table '{:args [">>> re-find <<<" #"re-find"]} #{"str" "=" "get"} #{}))
 
 (deftest nil-arg-test
-  (test-table {:args '["nil"] :ret "boolean?"} #{"some?" "="} #{}))
+  (test-table '{:args [nil] :ret boolean?} #{"some?" "="} #{}))
 
-(deftest empty-arg-test
-  (test-table {:args '[] :ret "coll?"} #{"into" "conj" "clojure.set/union" "range"} #{}))
+(deftest nil-ret-test
+  (test-table '{:args [nil] :ret nil} #{"last" "into" "conj"} #{}))
+
+(deftest empty-args-test
+  (test-table '{:args [] :ret coll?} #{"into" "conj" "clojure.set/union" "range"} #{}))
 
 (defn stop-server []
   (when-let [s @server]
