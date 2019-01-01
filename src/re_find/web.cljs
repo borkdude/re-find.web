@@ -169,7 +169,9 @@
                {:args "{} [:a :b :c] :d"
                 :ret "{:a {:b {:c :d}}}"}
                {:args "{:a nil :b nil} :a"
-                :ret "(MapEntry. :a nil)"}])
+                :ret "(MapEntry. :a nil)"}
+               {:args "val {:a 1 :b 2 :c nil}"
+                :ret "[1 2]"}])
 
 (def init-state {:args ""
                  :ret ""
