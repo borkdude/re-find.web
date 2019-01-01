@@ -317,7 +317,7 @@
                            args?
                            (assoc :args args*)
                            ret*
-                           (assoc :ret ret-val)
+                           (assoc :ret (first ret*))
                            (and (not ret-pred)
                                 args*
                                 ret*
