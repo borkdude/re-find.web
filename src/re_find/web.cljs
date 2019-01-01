@@ -7,6 +7,7 @@
    [cljsjs.codemirror.addon.display.placeholder]
    [cljsjs.codemirror.addon.edit.matchbrackets]
    [cljsjs.codemirror.mode.clojure]
+   [cljsjs.codemirror.addon.runmode.runmode]
    [cljsjs.parinfer]
    [cljsjs.parinfer-codemirror]
    [clojure.spec.alpha :as s]
@@ -67,37 +68,13 @@
 
 (def nbsp "\u00a0")
 
-(defn highlight* [cm-ref text]
+(defn highlight [text]
   (r/create-class
-   {:render (fn [] [:textarea
-                    {:class "mono"
-                     :type "text"
-                     :default-value text
-                     :auto-complete "off"}])
+   {:render (fn []
+              [:span.cm-s-default.mono.inline])
     :component-did-mount
     (fn [this]
-      (let [opts #js {:mode "clojure"
-                      :readOnly true}
-            cm (.fromTextArea js/CodeMirror
-                              (r/dom-node this)
-                              opts)]
-        (vreset! cm-ref cm)))}))
-
-(defn highlight [text]
-  (let [cm-ref (volatile! nil)]
-    (r/create-class
-     {:render (fn [] [:span.cm-s-default.mono.inline
-                      [highlight* cm-ref text]])
-      :component-did-mount
-      (fn [this]
-        (let [dn (r/dom-node this)
-              lines (.-firstChild (.querySelector dn ".CodeMirror-line"))
-              lines (.cloneNode lines true)]
-          ;; toTextArea will destroy and clean up cm
-          (.toTextArea @cm-ref)
-          (while (.-firstChild dn)
-            (.removeChild dn (.-firstChild dn)))
-          (.prepend dn lines)))})))
+      (js/CodeMirror.runMode text "clojure" (r/dom-node this)))}))
 
 (def general-help
   [:div.help
