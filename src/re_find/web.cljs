@@ -305,10 +305,10 @@
                          (some? args*))
               ret-pred (when (fn? (first ret*))
                          (first ret*))
-              ret-val (and ret*
-                           (not= ret* ::invalid)
-                           (not ret-pred)
-                           (first ret*))
+              ret-val (when (and ret*
+                                 (not= ret* ::invalid)
+                                 (not ret-pred))
+                        (first ret*))
               more? (if from-example?
                       (:more? @example-state)
                       (:more? @app-state))
@@ -316,7 +316,7 @@
                            more? (assoc :permutations? true)
                            args?
                            (assoc :args args*)
-                           (and ret* ret-val)
+                           ret*
                            (assoc :ret ret-val)
                            (and (not ret-pred)
                                 args*
@@ -337,10 +337,12 @@
                              (cond-> m
                                (or (nil? ret*) ret-pred (= ret-val (:ret-val m)))
                                (assoc :exact? true)
-                               (and ret* ret-val)
+                               (when ret* ret-val)
                                (assoc :type-score (type-score ret-val (:ret-val m)))))
                            results)]
-          (let [no-perm-syms (set (keep #(when (not (:permutation? %))
+          (let [results (if more? (take 50 results) results)
+                ;; from here on, results can be fully realized
+                no-perm-syms (set (keep #(when (not (:permutation? %))
                                            (:sym %)) results))
                 results (map #(if (:permutation? %)
                                 (assoc % :duplicate? (contains? no-perm-syms (:sym %)))
@@ -349,9 +351,10 @@
                                        :type-score
                                        (comp not :permutation?)
                                        (comp not :duplicate?))
-                                 > results)
-                results (if more? results (take 5 results))]
+                                 > results)]
             [:div {:class (when from-example? "example")}
+             #_[:pre "TOTAL: " (count results)]
+             #_[:div "SYMS: " (stest/instrumentable-syms)]
              (if (seq results)
                [:table.table.results
                 [:thead

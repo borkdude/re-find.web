@@ -88,6 +88,9 @@
 (deftest nil-arg-test
   (test-table {:args '["nil"] :ret "boolean?"} #{"some?" "="} #{}))
 
+(deftest nil-ret-test
+  (test-table {:args '["nil"] :ret "nil"} #{"last" "into" "conj"} #{}))
+
 (deftest empty-arg-test
   (test-table {:args '[] :ret "coll?"} #{"into" "conj" "clojure.set/union" "range"} #{}))
 
