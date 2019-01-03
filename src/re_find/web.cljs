@@ -148,7 +148,9 @@
                {:args "{:a nil :b nil} :a"
                 :ret "(MapEntry. :a nil)"}
                {:args "val {:a 1 :b 2 :c nil}"
-                :ret "[1 2]"}])
+                :ret "[1 2]"}
+               {:args "second [:a 1] [:b 2] [:c -1]"
+                :ret "[:b 2]"}])
 
 (def init-state {:args ""
                  :ret ""
