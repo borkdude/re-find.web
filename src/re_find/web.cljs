@@ -307,21 +307,25 @@
               args? (and args*
                          (not= args* ::invalid)
                          (some? args*))
-              ret-pred (when (fn? (first ret*))
-                         (first ret*))
-              ret-val (when (and ret*
-                                 (not= ret* ::invalid)
-                                 (not ret-pred))
-                        (first ret*))
+              ret? (and ret* (not= ret* ::invalid))
               more? (if from-example?
                       (:more? @example-state)
                       (:more? @app-state))
+              ret-pred (and ret?
+                            (cond (fn? (first ret*))
+                                  (first ret*)
+                                  (and more? (sequential? (first ret*)))
+                                  #(when (sequential? %)
+                                     (= (seq (first ret*)) (seq %)))))
+              ret-val (when (and ret?
+                                 (not ret-pred))
+                        (first ret*))
               match-args (cond-> {:printable-args printable-args}
                            more? (assoc :permutations? true)
                            args?
                            (assoc :args args*)
-                           ret*
-                           (assoc :ret (first ret*))
+                           ret?
+                           (assoc :ret (or ret-pred ret-val))
                            (and (not ret-pred)
                                 args*
                                 ret*
