@@ -19,30 +19,30 @@
    )
   (:import [goog Uri]))
 
-(defprotocol ToFinite
-  (to-finite [x]))
+(defprotocol Finitize
+  (finitize [x]))
 
 (def take-max 100)
 
-(extend-protocol ToFinite
+(extend-protocol Finitize
 
   default
-  (to-finite [x] x)
+  (finitize [x] x)
 
   LazySeq
-  (to-finite [x] (take take-max x))
+  (finitize [x] (take take-max x))
 
   Cons
-  (to-finite [x] (take take-max x))
+  (finitize [x] (take take-max x))
 
   Range
-  (to-finite [x] (take take-max x))
+  (finitize [x] (take take-max x))
 
   Iterate
-  (to-finite [x] (take take-max x))
+  (finitize [x] (take take-max x))
 
   Repeat
-  (to-finite [x] (take take-max x)))
+  (finitize [x] (take take-max x)))
 
 (defn wrap-vector [s]
   (str "[" s "]"))
@@ -63,7 +63,7 @@
         (do
           (.error js/console err)
           ::invalid)
-        (mapv to-finite (:value @result))))
+        (mapv finitize (:value @result))))
     (catch :default _ ::invalid)))
 
 (def nbsp "\u00a0")
@@ -330,7 +330,7 @@
                              (.error js/console e)
                              nil))
               results (cond ret-pred
-                            (filter #(try (ret-pred (to-finite (:ret-val %)))
+                            (filter #(try (ret-pred (finitize (:ret-val %)))
                                           (catch :default e
                                             (.error js/console e)
                                             nil)) results)
