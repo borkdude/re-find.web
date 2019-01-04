@@ -26,7 +26,7 @@
 (defn args->str [args-vec]
   (str/join " " (map pr-str args-vec)))
 
-(defn link-from-example [{:keys [:args :ret :exact-ret-match? :permutations?]}]
+(defn link-from-example [{:keys [:args :ret :exact-ret-match? :permutations? :more?]}]
   (let [args-str (args->str args)
         ret-str (when ret (pr-str ret))
         qs (if (and (str/blank? ret-str)
@@ -38,7 +38,9 @@
                                   (when (true? exact-ret-match?)
                                     (str "exact=" exact-ret-match?))
                                   (when (true? permutations?)
-                                    (str "perms=" permutations?))])))]
+                                    (str "perms=" permutations?))
+                                  (when (true? more?)
+                                    (str "more=" more?))])))]
     (-> (str base-url "/?" qs)
         (str/replace #"\(" "%28")
         (str/replace #"\)" "%29"))))
@@ -95,6 +97,11 @@
 
 (deftest empty-args-test
   (test-table '{:args [] :ret coll?} #{"into" "conj" "clojure.set/union" "range"} #{}))
+
+(deftest sequential-ret-test
+  (test-table '{:args [1 [2 3 4]] :ret [1 2 3 4]
+                :more? true}
+              #{"cons"} #{}))
 
 (defn stop-server []
   (when-let [s @server]
