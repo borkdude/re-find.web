@@ -150,7 +150,9 @@
                {:args "val {:a 1 :b 2 :c nil}"
                 :ret "[1 2]"}
                {:args "second [:a 1] [:b 2] [:c -1]"
-                :ret "[:b 2]"}])
+                :ret "[:b 2]"}
+               {:args "{:a {:b :c}} [:a :b]"
+                :ret ":c"}])
 
 (def init-state {:args ""
                  :ret ""
