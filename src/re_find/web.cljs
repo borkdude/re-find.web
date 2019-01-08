@@ -19,31 +19,6 @@
    )
   (:import [goog Uri]))
 
-(defprotocol Finitize
-  (finitize [x]))
-
-(def take-max 100)
-
-(extend-protocol Finitize
-
-  default
-  (finitize [x] x)
-
-  LazySeq
-  (finitize [x] (take take-max x))
-
-  Cons
-  (finitize [x] (take take-max x))
-
-  Range
-  (finitize [x] (take take-max x))
-
-  Iterate
-  (finitize [x] (take take-max x))
-
-  Repeat
-  (finitize [x] (take take-max x)))
-
 (defn wrap-vector [s]
   (str "[" s "]"))
 
@@ -63,7 +38,7 @@
         (do
           (.error js/console err)
           ::invalid)
-        (mapv finitize (:value @result))))
+        (:value @result)))
     (catch :default _ ::invalid)))
 
 (def nbsp "\u00a0")
@@ -318,12 +293,13 @@
                                   ret-val
                                   (and more? (sequential? ret-val))
                                   #(= ret-val %)))
-              match-args (cond-> {:printable-args printable-args}
+              match-args (cond-> {:printable-args printable-args
+                                  :finitize? true}
                            more? (assoc :permutations? true)
                            args?
                            (assoc :args args*)
-                           (and ret? (not ret-pred))
-                           (assoc :ret ret-val)
+                           ret?
+                           (assoc :ret (or ret-pred ret-val))
                            (and (not ret-pred)
                                 args*
                                 ret*
@@ -333,12 +309,6 @@
                            (catch :default e
                              (.error js/console e)
                              nil))
-              results (cond ret-pred
-                            (filter #(try (ret-pred (finitize (:ret-val %)))
-                                          (catch :default e
-                                            (.error js/console e)
-                                            nil)) results)
-                            :else results)
               results (map (fn [m]
                              (cond-> m
                                (or (nil? ret*) ret-pred (= ret-val (:ret-val m)))
