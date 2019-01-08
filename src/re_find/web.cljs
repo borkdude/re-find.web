@@ -311,21 +311,19 @@
               more? (if from-example?
                       (:more? @example-state)
                       (:more? @app-state))
-              ret-pred (and ret?
-                            (cond (fn? (first ret*))
-                                  (first ret*)
-                                  (and more? (sequential? (first ret*)))
-                                  #(when (sequential? %)
-                                     (= (seq (first ret*)) (seq %)))))
-              ret-val (when (and ret?
-                                 (not ret-pred))
+              ret-val (when ret?
                         (first ret*))
+              ret-pred (and ret?
+                            (cond (fn? ret-val)
+                                  ret-val
+                                  (and more? (sequential? ret-val))
+                                  #(= ret-val %)))
               match-args (cond-> {:printable-args printable-args}
                            more? (assoc :permutations? true)
                            args?
                            (assoc :args args*)
-                           ret?
-                           (assoc :ret (or ret-pred ret-val))
+                           (and ret? (not ret-pred))
+                           (assoc :ret ret-val)
                            (and (not ret-pred)
                                 args*
                                 ret*
