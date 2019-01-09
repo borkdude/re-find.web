@@ -290,12 +290,11 @@
                         (first ret*))
               ret-pred (and ret?
                             (cond (fn? ret-val)
-                                  ret-val
-                                  (and more? (sequential? ret-val))
-                                  #(= ret-val %)))
+                                  ret-val))
               match-args (cond-> {:printable-args printable-args
                                   :finitize? true}
-                           more? (assoc :permutations? true)
+                           more? (assoc :permutations? true
+                                        :sequential? true)
                            args?
                            (assoc :args args*)
                            ret?
@@ -311,9 +310,7 @@
                              nil))
               results (map (fn [m]
                              (cond-> m
-                               (or (nil? ret*) ret-pred (= ret-val (:ret-val m)))
-                               (assoc :exact? true)
-                               (when ret* ret-val)
+                               ret*
                                (assoc :type-score (type-score ret-val (:ret-val m)))))
                            results)]
           (let [results (if more? (take 50 results) results)
