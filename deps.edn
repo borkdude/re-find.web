@@ -2,10 +2,10 @@
         org.clojure/clojurescript {:mvn/version "1.10.439"}
         reagent {:mvn/version "0.8.1"}
         re-find {:git/url "https://github.com/borkdude/re-find"
-                 :sha "dbc12a39fb41dd9176402a1a9e32dc3569e3b41a"}
+                 :sha "990792acaf1e36ad037c11634c1d87e556ca7319"}
         org.clojure/test.check {:mvn/version "0.9.0"}
         speculative {:git/url "https://github.com/borkdude/speculative"
-                     :sha "a30ee99c64e9dfd37f892442c3ea51fc652b7cfa"}
+                     :sha "fe125abb5d8fba212a96ace4cdf7d57e9062126f"}
         cljsjs/codemirror {:mvn/version "5.40.2-1"}
         cljsjs/parinfer-codemirror {:mvn/version "1.4.1-2"}}
  :paths ["src" "resources"]
