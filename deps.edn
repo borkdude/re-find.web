@@ -2,10 +2,10 @@
         org.clojure/clojurescript {:mvn/version "1.10.439"}
         reagent {:mvn/version "0.8.1"}
         re-find {:git/url "https://github.com/borkdude/re-find"
-                 :sha "990792acaf1e36ad037c11634c1d87e556ca7319"}
+                 :sha "8f0ca0900843bdd8ec886117e5637010bf23e4c6"}
         org.clojure/test.check {:mvn/version "0.9.0"}
         speculative {:git/url "https://github.com/borkdude/speculative"
-                     :sha "077d52e3ee6d5031f7843b957a32a79d4ae64895"}
+                     :sha "8bbeeba83f2182c079e502d77dcddd1cfc18aa3c"}
         cljsjs/codemirror {:mvn/version "5.40.2-1"}
         cljsjs/parinfer-codemirror {:mvn/version "1.4.1-2"}}
  :paths ["src" "resources"]
@@ -18,7 +18,7 @@
            :dev {:main-opts ["-m" "figwheel.main" "-b" "dev" "-r"]}
            ;; I'm setting optimize-constants to false for now, because of circular error
            :build-simple {:main-opts ["-m" "cljs.main" "-O" "simple" "-co" "{:pretty-print,false,:optimize-constants,false,:static-fns,true}" "-d" "out" "-c" "re-find.web"]}
-           :test {:extra-deps {etaoin {:mvn/version "0.2.9"}
+           :test {:extra-deps {etaoin {:mvn/version "0.3.1"}
                                org.jsoup/jsoup {:mvn/version "1.11.3"}
                                lein-simpleton {:mvn/version "1.3.0"}}
                   :extra-paths ["test"]

@@ -103,6 +103,11 @@
                 :more? true}
               #{"cons"} #{}))
 
+(deftest finitize-ret-test
+  (test-table '{:args [] :ret #(every? number? %)
+                :more? true}
+              #{"range"} #{}))
+
 (defn stop-server []
   (when-let [s @server]
     (.stop s 0)))
