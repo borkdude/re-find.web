@@ -195,24 +195,15 @@
   (let [uri (.parse Uri (.. js/window -location -href))
         {:keys [:args :ret :exact-ret-match? :permutations?
                 :no-args? :more?]} state
-        qs (if (and (str/blank? ret)
-                    (str/blank? args)) nil
-               (str/join "&"
-                         (filter identity
-                                 [(when (not-empty args) (str "args=" (format-query-string args)))
-                                  (when (not-empty ret) (str "ret=" (format-query-string ret)))
-                                  (when (true? exact-ret-match?)
-                                    (str "exact=" exact-ret-match?))
-                                  (when (true? permutations?)
-                                    (str "perms=" permutations?))
-                                  (when (true? no-args?)
-                                    (str "no-args=" no-args?))
-                                  (when (true? more?)
-                                    (str "more=" more?))])))
-        _ (.setQuery uri qs)]
-    (-> (str uri)
-        (str/replace #"\(" "%28")
-        (str/replace #"\)" "%29"))))
+        qd (cond-> (Uri.QueryData.)
+             (not-empty args) (.add "args" (format-query-string args))
+             (not-empty ret) (.add "ret" (format-query-string ret))
+             (true? exact-ret-match?) (.add "exact" exact-ret-match?)
+             (true? permutations?) (.add "perms" permutations?)
+             (true? no-args?) (.add "no-args" no-args?)
+             (true? more?) (.add "more" more?))]
+    (.setQueryData uri qd)
+    (str uri)))
 
 (defn sync-address-bar []
   (let [link (shareable-link @app-state)]
