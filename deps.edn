@@ -5,7 +5,7 @@
                  :sha "8f0ca0900843bdd8ec886117e5637010bf23e4c6"}
         org.clojure/test.check {:mvn/version "0.9.0"}
         speculative {:git/url "https://github.com/borkdude/speculative"
-                     :sha "33eb2c59133b305f98e26380d3132ea76b049cda"}
+                     :sha "65f7de549071d0efd21ae63e780b9f9546263ee9"}
         cljsjs/codemirror {:mvn/version "5.40.2-1"}
         cljsjs/parinfer-codemirror {:mvn/version "1.4.1-2"}}
  :paths ["src" "resources"]
