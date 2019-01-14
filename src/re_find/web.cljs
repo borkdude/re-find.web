@@ -294,7 +294,8 @@
               match-args (cond-> {:printable-args printable-args
                                   :finitize? true}
                            more? (assoc :permutations? true
-                                        :sequential? true)
+                                        :sequential? true
+                                        :splice-last-arg? true)
                            args?
                            (assoc :args args*)
                            ret?
