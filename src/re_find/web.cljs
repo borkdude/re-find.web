@@ -203,7 +203,10 @@
              (true? no-args?) (.add "no-args" no-args?)
              (true? more?) (.add "more" more?))]
     (.setQueryData uri qd)
-    (str uri)))
+    (-> (str uri)
+        ;; Twitter does not handle links that end with parens well
+        (str/replace #"\(" "%28")
+        (str/replace #"\)" "%29"))))
 
 (defn sync-address-bar []
   (let [link (shareable-link @app-state)]
