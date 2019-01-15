@@ -4,6 +4,7 @@
    [etaoin.api :as eta]
    [clojure.string :as str]
    [clojure.test :as t :refer [is deftest run-tests]]
+   [clojure.math.combinatorics :refer [permutations]]
    [re-find.jsoup :as jsoup]
    [clojure.set :as set]
    [clojure.java.io :as io]))
@@ -49,13 +50,11 @@
   (eta/js-execute driver
                   (format "return document.querySelector('%s').outerHTML" css)))
 
-(defn permutations [s]
-  (lazy-seq
-   (if (seq (rest s))
-     (apply concat
-            (for [x s]
-              (map #(cons x %) (permutations (remove #{x} s)))))
-     [s])))
+(defn splice-last-arg [args]
+  (let [l (last args)]
+    (if (seqable? l)
+      [args (into (vec (butlast args)) l)]
+      [args])))
 
 (defn test-table [example expected-syms expected-permutation-syms]
   (eta/with-postmortem @driver pm-opt
@@ -74,16 +73,16 @@
               syms-displayed (set (map first texts))
               args-displayed (set (map second texts))]
           (is (set/subset? expected-syms syms-displayed))
-          (is (= 1 (count args-displayed)))
+          (is (pos? (count args-displayed)))
           (is (= args-str (first args-displayed))))
         ;; expected-permutation-syms
-        (let [args-permutations (set (map args->str (permutations (:args example))))
+        (let [args-variations (set (map args->str (mapcat splice-last-arg (permutations (:args example)))))
               trs (jsoup/select (jsoup/parse html) "tr.permutation")
               texts (partition-all
                      3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
               syms-displayed (set (map first texts))
               args-displayed (set (map second texts))]
-          (is (set/subset? args-displayed args-permutations))
+          (is (set/subset? args-displayed args-variations))
           (is (set/subset? expected-permutation-syms syms-displayed)))))))
 
 (deftest only-args-test
@@ -107,6 +106,12 @@
   (test-table '{:args [] :ret #(every? number? %)
                 :more? true}
               #{"range"} #{}))
+
+(deftest splice-last-arg-test
+  (test-table '{:args [{:a 1 :b 2 :c 3} [:b :c]]
+                :ret {:a 1}
+                :more? true}
+              #{"dissoc"} #{}))
 
 (defn stop-server []
   (when-let [s @server]

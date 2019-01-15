@@ -288,7 +288,8 @@
               match-args (cond-> {:printable-args printable-args
                                   :finitize? true}
                            more? (assoc :permutations? true
-                                        :sequential? true)
+                                        :sequential? true
+                                        :splice-last-arg? true)
                            args?
                            (assoc :args args*)
                            ret?
@@ -336,9 +337,10 @@
                                 :exact?] :as r}
                         results]
                     ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
-                    [:tr {:class [(when duplicate? "duplicate")
-                                  (when permutation? "permutation")
-                                  (when-not exact? "non-exact")]}
+                    [:tr {:class (when-not exact?
+                                   [(when duplicate? "duplicate")
+                                    (when permutation? "permutation")
+                                    (when-not exact? "non-exact")])}
                      [:td [:a {:href (clojuredocs-url sym)
                                :target "_blank"}
                            [highlight (show-sym sym)]]]
