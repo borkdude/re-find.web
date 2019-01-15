@@ -337,9 +337,10 @@
                                 :exact?] :as r}
                         results]
                     ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
-                    [:tr {:class [(when duplicate? "duplicate")
-                                  (when permutation? "permutation")
-                                  (when-not exact? "non-exact")]}
+                    [:tr {:class (when-not exact?
+                                   [(when duplicate? "duplicate")
+                                    (when permutation? "permutation")
+                                    (when-not exact? "non-exact")])}
                      [:td [:a {:href (clojuredocs-url sym)
                                :target "_blank"}
                            [highlight (show-sym sym)]]]
