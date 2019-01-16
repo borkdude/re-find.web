@@ -201,7 +201,10 @@
              (true? exact-ret-match?) (.add "exact" exact-ret-match?)
              (true? permutations?) (.add "perms" permutations?)
              (true? no-args?) (.add "no-args" no-args?)
-             (true? more?) (.add "more" more?))]
+             (and (true? more?)
+                  (or (not-empty args)
+                      (not-empty ret)))
+             (.add "more" more?))]
     (.setQueryData uri qd)
     (-> (str uri)
         ;; Twitter does not handle links that end with parens well
@@ -251,6 +254,8 @@
     (str base "/" ns "/" name)))
 
 (defn search-results []
+  ;; NOTE: we only read from deferred state and not from app-state to prevent
+  ;; unnecessary re-rendering
   (binding [*print-length* 10]
     (let [{:keys [:args :ret :exact-ret-match? :permutations? :no-args?]}
           @delayed-state
@@ -262,12 +267,7 @@
                          [(when-not (and (str/blank? args) no-args?)
                             (eval-str args))
                           (when-not (str/blank? ret)
-                            (eval-str ret))])
-          [exact-ret-match? permutations?]
-          (if from-example?
-            [(:exact-ret-match? @example-state)
-             (:permutations? @example-state)]
-            [exact-ret-match? permutations?])]
+                            (eval-str ret))])]
       (when (and (not= ::invalid args*)
                  (not= ::invalid ret*))
         (let [printable-args (if from-example?
@@ -279,7 +279,7 @@
               ret? (and ret* (not= ret* ::invalid))
               more? (if from-example?
                       (:more? @example-state)
-                      (:more? @app-state))
+                      (:more? @delayed-state))
               ret-val (when ret?
                         (first ret*))
               ret-pred (and ret?
@@ -336,7 +336,7 @@
                                 :permutation? :duplicate? :ret-spec
                                 :exact?] :as r}
                         results]
-                    ^{:key (pr-str (show-sym sym) "-" (:printable-args r))}
+                    ^{:key (pr-str (show-sym sym) "-" printable-args)}
                     [:tr {:class (when-not exact?
                                    [(when duplicate? "duplicate")
                                     (when permutation? "permutation")
@@ -351,7 +351,9 @@
                [:p "No results found."])
              [:a {:href (when-not from-example? "#")
                   :on-click (fn []
-                              (when-not from-example? (swap! app-state update :more? not)))}
+                              (when-not from-example?
+                                (swap! delayed-state update :more? not)
+                                (swap! app-state update :more? not)))}
               (if more? "Show less\u2026" "Show more\u2026")]]))))))
 
 (defn editor [id path]

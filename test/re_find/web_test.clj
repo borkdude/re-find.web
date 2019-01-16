@@ -3,7 +3,8 @@
    [leiningen.simpleton :as simpleton]
    [etaoin.api :as eta]
    [clojure.string :as str]
-   [clojure.test :as t :refer [is deftest run-tests]]
+   [clojure.test :as t :refer [is deftest run-tests
+                               testing]]
    [clojure.math.combinatorics :refer [permutations]]
    [re-find.jsoup :as jsoup]
    [clojure.set :as set]
@@ -51,15 +52,16 @@
                   (format "return document.querySelector('%s').outerHTML" css)))
 
 (defn splice-last-arg [args]
-  (let [l (last args)]
-    (if (seqable? l)
+  (let [l (eval (last args))]
+    (if (and some? (seqable? l))
       [args (into (vec (butlast args)) l)]
       [args])))
 
-(defn test-table [example expected-syms expected-permutation-syms]
+(defn test-table [{:keys [:args :ret :more?] :as example}
+                  expected-syms expected-permutation-syms]
   (eta/with-postmortem @driver pm-opt
-    (let [args-str (args->str (:args example))
-          ret-str (pr-str (:ret example))
+    (let [args-str (args->str args)
+          ret-str (pr-str ret)
           link (link-from-example example)]
       (eta/go @driver link)
       (is (= args-str
@@ -72,9 +74,15 @@
                      3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
               syms-displayed (set (map first texts))
               args-displayed (set (map second texts))]
+          (testing "combination of sym + args is unique"
+            (is (= (distinct (map (juxt first second) texts))
+                   (map (juxt first second) texts))))
           (is (set/subset? expected-syms syms-displayed))
           (is (pos? (count args-displayed)))
-          (is (= args-str (first args-displayed))))
+          (is (or (= args-str (first args-displayed))
+                  (when more?
+                    (= (args->str (second (splice-last-arg args)))
+                       (first args-displayed))))))
         ;; expected-permutation-syms
         (let [args-variations (set (map args->str (mapcat splice-last-arg (permutations (:args example)))))
               trs (jsoup/select (jsoup/parse html) "tr.permutation")
@@ -111,7 +119,11 @@
   (test-table '{:args [{:a 1 :b 2 :c 3} [:b :c]]
                 :ret {:a 1}
                 :more? true}
-              #{"dissoc"} #{}))
+              #{"dissoc"} #{})
+  (test-table '{:args [(list 1 2 3)]
+                :ret 6
+                :more? true}
+              #{"*" "+"} #{}))
 
 (defn stop-server []
   (when-let [s @server]
