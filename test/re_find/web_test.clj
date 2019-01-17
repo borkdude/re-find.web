@@ -58,9 +58,14 @@
       [args])))
 
 (defn test-table [{:keys [:args :ret :more?] :as example}
-                  expected-syms expected-permutation-syms]
+                  expected expected-permutation-syms]
   (eta/with-postmortem @driver pm-opt
-    (let [args-str (args->str args)
+    (let [expected-syms (if (every? map? expected)
+                          (set (map :sym expected))
+                          expected)
+          expected-sym-args-ret (when (every? map? expected)
+                                  (map (juxt :sym :args :ret) expected)) 
+          args-str (args->str args)
           ret-str (pr-str ret)
           link (link-from-example example)]
       (eta/go @driver link)
@@ -74,9 +79,10 @@
                      3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
               syms-displayed (set (map first texts))
               args-displayed (set (map second texts))]
-          (testing "combination of sym + args is unique"
-            (is (= (distinct (map (juxt first second) texts))
-                   (map (juxt first second) texts))))
+          (testing "combination of sym + args + ret is unique"
+            (is (= (distinct texts) texts)))
+          (testing "expected sym + arg +ret combinations"
+            (is (set/subset? (set expected-sym-args-ret) (set texts))))
           (is (set/subset? expected-syms syms-displayed))
           (is (pos? (count args-displayed)))
           (is (or (= args-str (first args-displayed))
@@ -124,6 +130,20 @@
                 :ret 6
                 :more? true}
               #{"*" "+"} #{}))
+
+(deftest arg-ret-printing
+  (test-table '{:args [inc inc]
+                :ret (fn [f] (= 2 (f 0)))
+                :more? true}
+              #{{:sym "comp"
+                 :args "inc inc"
+                 :ret "function"}} #{})
+  (test-table '{:args [(list 1 2 3)]
+                :ret 6
+                :more? true}
+              #{{:sym "*"
+                 :args "1 2 3"
+                 :ret "6"}} #{}))
 
 (defn stop-server []
   (when-let [s @server]
