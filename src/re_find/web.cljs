@@ -253,6 +253,11 @@
         name (cd-encode (name sym))]
     (str base "/" ns "/" name)))
 
+(defn show-val [x]
+  (if (fn? x)
+    "function"
+    (pr-str x)))
+
 (defn search-results []
   ;; NOTE: we only read from deferred state and not from app-state to prevent
   ;; unnecessary re-rendering
@@ -344,9 +349,9 @@
                      [:td [:a {:href (clojuredocs-url sym)
                                :target "_blank"}
                            [highlight (show-sym sym)]]]
-                     (when args? [:td [highlight (str/join " " (map pr-str printable-args))]])
+                     (when args? [:td [highlight (str/join " " (map show-val printable-args))]])
                      [:td [highlight
-                           (if args? (pr-str ret-val)
+                           (if args? (show-val ret-val)
                                (pr-str (s/form ret-spec)))]]]))]]
                [:p "No results found."])
              [:a {:href (when-not from-example? "#")
