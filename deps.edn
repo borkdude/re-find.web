@@ -1,5 +1,5 @@
 {:deps {org.clojure/clojure {:mvn/version "1.10.0"}
-        org.clojure/clojurescript {:mvn/version "1.10.512"}
+        org.clojure/clojurescript {:mvn/version "1.10.439"}
         reagent {:mvn/version "0.8.1"}
         re-find {:git/url "https://github.com/borkdude/re-find"
                  :sha "c27af619a9d9e12832b7446e127d68ab916ce78c"}
