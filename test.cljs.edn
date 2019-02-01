@@ -7,4 +7,5 @@
   ;; you will have to figure out the path to chrome on your system
   ;; :launch-js ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" "--headless" "--disable-gpu" "--repl" :open-url]
   }
-{:main re-find.test-runner}
+{:main re-find.test-runner
+ :closure-defines {speculative.instrument/no-unload-blacklist? true}}
