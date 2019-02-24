@@ -15,8 +15,10 @@
    [goog.functions :as functions]
    [re-find.core :as re-find]
    [reagent.core :as r]
-   ;; load all the specs
-   [speculative.instrument])
+   ;; load specs
+   [speculative.core]
+   [speculative.set]
+   [speculative.string])
   (:import [goog Uri]))
 
 (defn wrap-vector [s]
