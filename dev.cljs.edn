@@ -1,5 +1,4 @@
 ^{:watch-dirs ["src"]
   :css-dirs ["resources/public/css"]
   :auto-testing false}
-{:main re-find.web
- :closure-defines {speculative.instrument/no-unload-blacklist? true}}
+{:main re-find.web}
