@@ -1,11 +1,11 @@
 {:deps {org.clojure/clojure {:mvn/version "1.10.0"}
-        org.clojure/clojurescript {:mvn/version "1.10.439"}
+        org.clojure/clojurescript {:mvn/version "1.10.520"}
         reagent {:mvn/version "0.8.1"}
         re-find {:git/url "https://github.com/borkdude/re-find"
                  :sha "c27af619a9d9e12832b7446e127d68ab916ce78c"}
         org.clojure/test.check {:mvn/version "0.9.0"}
         speculative {:git/url "https://github.com/borkdude/speculative"
-                     :sha "776e88f59dda5b8d159f66919423a12538a77ad7"}
+                     :sha "a2776f36d66fe171eb674da61c27676126f800e7"}
         cljsjs/codemirror {:mvn/version "5.40.2-1"}
         cljsjs/parinfer-codemirror {:mvn/version "1.4.1-2"}}
  :paths ["src" "resources"]
