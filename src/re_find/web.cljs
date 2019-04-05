@@ -15,10 +15,7 @@
    [goog.functions :as functions]
    [re-find.core :as re-find]
    [reagent.core :as r]
-   ;; load specs
-   [speculative.core]
-   [speculative.set]
-   [speculative.string])
+   [re-find.specs])
   (:import [goog Uri]))
 
 (defn wrap-vector [s]
@@ -249,11 +246,15 @@
       (str/replace #"\\" "_bs")
       (str/replace #"\?" "_q")))
 
-(defn clojuredocs-url [sym]
-  (let [base  "https://clojuredocs.org"
-        ns (str/replace (namespace sym) #"^cljs.core$" "clojure.core")
-        name (cd-encode (name sym))]
-    (str base "/" ns "/" name)))
+(defn external-url [sym]
+  (case (namespace sym)
+    "medley.core"
+    (let [base "http://weavejester.github.io/medley/medley.core.html"]
+      (str base "#" (name sym)))
+    (let [base  "https://clojuredocs.org"
+          ns (str/replace (namespace sym) #"^cljs.core$" "clojure.core")
+          name (cd-encode (name sym))]
+      (str base "/" ns "/" name))))
 
 (defn show-val [x]
   (if (fn? x)
@@ -348,7 +349,7 @@
                                    [(when duplicate? "duplicate")
                                     (when permutation? "permutation")
                                     (when-not exact? "non-exact")])}
-                     [:td [:a {:href (clojuredocs-url sym)
+                     [:td [:a {:href (external-url sym)
                                :target "_blank"}
                            [highlight (show-sym sym)]]]
                      (when args? [:td [highlight (str/join " " (map show-val printable-args))]])
