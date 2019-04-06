@@ -315,54 +315,57 @@
                              (cond-> m
                                ret*
                                (assoc :type-score (type-score ret-val (:ret-val m)))))
-                           results)]
-          (let [results (if more? (take 50 results) results)
-                ;; from here on, results can be fully realized
-                no-perm-syms (set (keep #(when (not (:permutation? %))
-                                           (:sym %)) results))
-                results (map #(if (:permutation? %)
-                                (assoc % :duplicate? (contains? no-perm-syms (:sym %)))
-                                %) results)
-                results (sort-by (juxt :exact?
-                                       :type-score
-                                       (comp not :permutation?)
-                                       (comp not :duplicate?))
-                                 > results)]
-            [:div {:class (when from-example? "example")}
-             #_[:pre "TOTAL: " (count results)]
-             #_[:div "SYMS: " (stest/instrumentable-syms)]
-             (if (seq results)
-               [:table.table.results
-                [:thead
-                 [:tr
-                  [:th "function"]
-                  (when args? [:th "arguments"])
-                  [:th (if args? "return value" ":ret spec")]]]
-                [:tbody
-                 (doall
-                  (for [{:keys [:printable-args :sym :ret-val
-                                :permutation? :duplicate? :ret-spec
-                                :exact?] :as r}
-                        results]
-                    ^{:key (pr-str (show-sym sym) "-" printable-args)}
-                    [:tr {:class (when-not exact?
-                                   [(when duplicate? "duplicate")
-                                    (when permutation? "permutation")
-                                    (when-not exact? "non-exact")])}
-                     [:td [:a {:href (external-url sym)
-                               :target "_blank"}
-                           [highlight (show-sym sym)]]]
-                     (when args? [:td [highlight (str/join " " (map show-val printable-args))]])
-                     [:td [highlight
-                           (if args? (show-val ret-val)
-                               (pr-str (s/form ret-spec)))]]]))]]
-               [:p "No results found."])
-             [:a {:href (when-not from-example? "#")
-                  :on-click (fn []
-                              (when-not from-example?
-                                (swap! delayed-state update :more? not)
-                                (swap! app-state update :more? not)))}
-              (if more? "Show less\u2026" "Show more\u2026")]]))))))
+                           results)
+              ;; look ahead more than we actually display to find potentially
+              ;; exact matches further along
+              results (if more? (take 100 results) results)
+              ;; from here on, results can be fully realized
+              no-perm-syms (set (keep #(when (not (:permutation? %))
+                                         (:sym %)) results))
+              results (map #(if (:permutation? %)
+                              (assoc % :duplicate? (contains? no-perm-syms (:sym %)))
+                              %) results)
+              results (sort-by (juxt :exact?
+                                     :type-score
+                                     (comp not :permutation?)
+                                     (comp not :duplicate?))
+                               > results)
+              results (take 50 results)]
+          [:div {:class (when from-example? "example")}
+           #_[:pre "TOTAL: " (count results)]
+           #_[:div "SYMS: " (stest/instrumentable-syms)]
+           (if (seq results)
+             [:table.table.results
+              [:thead
+               [:tr
+                [:th "function"]
+                (when args? [:th "arguments"])
+                [:th (if args? "return value" ":ret spec")]]]
+              [:tbody
+               (doall
+                (for [{:keys [:printable-args :sym :ret-val
+                              :permutation? :duplicate? :ret-spec
+                              :exact?] :as r}
+                      results]
+                  ^{:key (pr-str (show-sym sym) "-" printable-args)}
+                  [:tr {:class (when-not exact?
+                                 [(when duplicate? "duplicate")
+                                  (when permutation? "permutation")
+                                  (when-not exact? "non-exact")])}
+                   [:td [:a {:href (external-url sym)
+                             :target "_blank"}
+                         [highlight (show-sym sym)]]]
+                   (when args? [:td [highlight (str/join " " (map show-val printable-args))]])
+                   [:td [highlight
+                         (if args? (show-val ret-val)
+                             (pr-str (s/form ret-spec)))]]]))]]
+             [:p "No results found."])
+           [:a {:href (when-not from-example? "#")
+                :on-click (fn []
+                            (when-not from-example?
+                              (swap! delayed-state update :more? not)
+                              (swap! app-state update :more? not)))}
+            (if more? "Show less\u2026" "Show more\u2026")]])))))
 
 (defn editor [id path]
   (r/create-class
