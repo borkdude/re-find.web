@@ -72,23 +72,22 @@
       (is (= args-str
              (eta/get-element-value @driver {:css "#args"})))
       (eta/wait-exists @driver {:css "#re-find .results:not(.example)"})
-      (let [html (get-outer-html @driver "#re-find .results")]
-        ;; expected-syms
-        (let [trs (jsoup/select (jsoup/parse html) "tr:not(.permutation):not(.duplicate)")
-              texts (partition-all
-                     3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
-              syms-displayed (set (map first texts))
-              args-displayed (set (map second texts))]
-          (testing "combination of sym + args + ret is unique"
-            (is (= (distinct texts) texts)))
-          (testing "expected sym + arg +ret combinations"
-            (is (set/subset? (set expected-sym-args-ret) (set texts))))
-          (is (set/subset? expected-syms syms-displayed))
-          (is (pos? (count args-displayed)))
-          (is (or (= args-str (first args-displayed))
-                  (when more?
-                    (= (args->str (second (splice-last-arg args)))
-                       (first args-displayed))))))
+      (let [html (get-outer-html @driver "#re-find .results")
+            trs (jsoup/select (jsoup/parse html) "tr:not(.permutation):not(.duplicate)")
+            texts (partition-all
+                   3 (map jsoup/text (mapcat #(jsoup/select % "td") trs)))
+            syms-displayed (set (map first texts))
+            args-displayed (set (map second texts))]
+        (testing "combination of sym + args + ret is unique"
+          (is (= (distinct texts) texts)))
+        (testing "expected sym + arg +ret combinations"
+          (is (set/subset? (set expected-sym-args-ret) (set texts))))
+        (is (set/subset? expected-syms syms-displayed))
+        (is (pos? (count args-displayed)))
+        (is (or (= args-str (first args-displayed))
+                (when more?
+                  (= (args->str (second (splice-last-arg args)))
+                     (first args-displayed)))))
         ;; expected-permutation-syms
         (let [args-variations (set (map args->str (mapcat splice-last-arg (permutations (:args example)))))
               trs (jsoup/select (jsoup/parse html) "tr.permutation")
@@ -144,6 +143,13 @@
               #{{:sym "*"
                  :args "1 2 3"
                  :ret "6"}} #{}))
+
+(deftest select-keys-test
+  ;; example reported at ClojureDays 2019
+  (test-table '{:args [[:a] {:a 1 :b 2}]
+                :ret {:a 1}
+                :more? true}
+              #{"select-keys"} #{}))
 
 (defn stop-server []
   (when-let [s @server]
