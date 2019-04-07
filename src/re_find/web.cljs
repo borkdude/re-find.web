@@ -318,7 +318,7 @@
                            results)
               ;; look ahead more than we actually display to find potentially
               ;; exact matches further along
-              results (if more? (take 100 results) results)
+              results (if more? (take 50 results) results)
               ;; from here on, results can be fully realized
               no-perm-syms (set (keep #(when (not (:permutation? %))
                                          (:sym %)) results))
@@ -329,8 +329,7 @@
                                      :type-score
                                      (comp not :permutation?)
                                      (comp not :duplicate?))
-                               > results)
-              results (take 50 results)]
+                               > results)]
           [:div {:class (when from-example? "example")}
            #_[:pre "TOTAL: " (count results)]
            #_[:div "SYMS: " (stest/instrumentable-syms)]

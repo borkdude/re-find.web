@@ -2,7 +2,7 @@
         org.clojure/clojurescript {:mvn/version "1.10.520"}
         reagent {:mvn/version "0.8.1"}
         re-find {:git/url "https://github.com/borkdude/re-find"
-                 :sha "c27af619a9d9e12832b7446e127d68ab916ce78c"}
+                 :sha "341de80525716d3a48f6b93e55c887bc9a92237f"}
         org.clojure/test.check {:mvn/version "0.9.0"}
         speculative {:git/url "https://github.com/borkdude/speculative"
                      :sha "cded1985fa51781a65dfa2c496146ca64fec1bb2"}
