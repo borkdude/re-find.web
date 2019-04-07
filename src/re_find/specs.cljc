@@ -19,4 +19,6 @@
 
 ;; Specs for medley:
 
-(s/fdef medley.core/index-by :args (s/cat :f ifn? :coll coll?))
+(s/fdef medley.core/index-by
+  :args (s/cat :f ifn? :coll coll?)
+  :ret map?)
