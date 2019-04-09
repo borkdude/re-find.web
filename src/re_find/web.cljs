@@ -60,7 +60,7 @@
 (def general-help
   [:div.help
    [:div.row
-    [:p.col-12 "Re-find helps you find Clojure functions. It is driven by "
+    [:p.col-12 "Re-find is driven by "
      [:a
       {:href "https://github.com/borkdude/re-find.web/blob/master/src/re_find/specs.cljc"}
       "spec"] ". " call-for-pr]]])
