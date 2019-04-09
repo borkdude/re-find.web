@@ -50,18 +50,20 @@
     (fn [this]
       (js/CodeMirror.runMode text "clojure" (r/dom-node this)))}))
 
+(def call-for-pr
+  [:span
+   "Are you missing a function? Please submit a PR for the spec at "
+   [:a
+    {:href "https://github.com/borkdude/re-find.web/blob/master/src/re_find/specs.cljc"} "re-find.web"]
+   "."])
+
 (def general-help
   [:div.help
    [:div.row
-    [:p.col-12 "Re-find helps you find Clojure functions. It leverages specs provided by "
-     [:a {:href "https://github.com/borkdude/speculative"} "speculative"] ". If
-      you are not finding the function you should be finding, it's either a bug
-      in this app, or there is currently no spec for this function. Please
-      report an issue about this at "
+    [:p.col-12 "Re-find helps you find Clojure functions. It is driven by "
      [:a
-      {:href "https://github.com/borkdude/re-find"} "re-find"]
-     " or " [:a
-             {:href "https://github.com/borkdude/speculative"} "speculative"] "."]]])
+      {:href "https://github.com/borkdude/re-find.web/blob/master/src/re_find/specs.cljc"}
+      "spec"] ". " call-for-pr]]])
 
 (def args-help
   [:div.help
