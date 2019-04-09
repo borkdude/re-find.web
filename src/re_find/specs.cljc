@@ -17,6 +17,10 @@
   :args (s/+ number?)
   :ret boolean?)
 
+(s/fdef clojure.core/take-nth
+  :args (s/cat :n int? :coll (s/? seqable?))
+  :ret (s/or :transducer ifn? :seqable seqable?))
+
 ;; Specs for medley:
 
 (s/fdef medley.core/index-by
