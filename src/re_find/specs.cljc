@@ -22,6 +22,10 @@
   :args (s/cat :n int? :coll (s/? seqable?))
   :ret (s/or :transducer ifn? :seqable seqable?))
 
+(s/fdef clojure.core/reverse
+  :args (s/cat :coll seqable?)
+  :ret seqable?)
+
 ;; Specs for medley:
 
 (s/fdef medley.core/index-by
