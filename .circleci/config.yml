@@ -27,7 +27,7 @@ jobs:
           command: script/build
       - run:
           name: Test project
-          command: SERVE=$PWD/docs/re-find.web PORT=8000 clojure -A:test
+          command: SERVE=$PWD/docs PORT=8000 clojure -A:test
       - store_artifacts:
           path: out/screenshots
           destination: screenshots
