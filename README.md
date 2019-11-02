@@ -2,8 +2,8 @@
 
 [![CircleCI](https://circleci.com/gh/borkdude/re-find.web/tree/master.svg?style=svg)](https://circleci.com/gh/borkdude/re-find.web/tree/master)
 
-Web interface to [re-find](https://github.com/borkdude/re-find) hosted at
-[re-find.it](https://re-find.it).
+Web interface to [re-find](https://github.com/borkdude/re-find) hosted
+[here](https://borkdude.github.io/re-find.web).
 
 ## Development
 
