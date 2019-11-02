@@ -9,7 +9,7 @@ jobs:
 
     steps:
       - checkout
-      
+
       # We want to share the results of "lein deps" between runs.
       # We assume that the maven cache can change only if "project.clj"
       # changes (see the checksum in the name of the key below).
@@ -27,7 +27,7 @@ jobs:
           command: script/build
       - run:
           name: Test project
-          command: SERVE=/tmp/re-find.web PORT=8000 clojure -A:test
+          command: SERVE=docs/re-find.web PORT=8000 clojure -A:test
       - store_artifacts:
           path: out/screenshots
           destination: screenshots

@@ -6,9 +6,8 @@
 (defn exit
   "Exit with the given status."
   [status]
-  (do
-    (shutdown-agents)
-    (System/exit status)))
+  (shutdown-agents)
+  (System/exit status))
 
 (defmethod clojure.test/report :summary [m]
   (clojure.test/with-test-out
@@ -19,5 +18,5 @@
     (exit 1)
     (exit 0)))
 
-(defn -main [& args]
+(defn -main [& _args]
   (t/run-tests 're-find.web-test))
