@@ -16,20 +16,20 @@ if [ "$PREVIOUS" != "true" ]; then
 fi
 
 echo "Preparing deploy folder"
-rm -rf /tmp/re-find.web
-mkdir -p /tmp/re-find.web/js
-cp out/main.js "/tmp/re-find.web/js/main-$commit.js"
-mkdir -p /tmp/re-find.web/css
-cp resources/public/css/style.css "/tmp/re-find.web/css/style-$commit.css"
-cp resources/public/prod.html /tmp/re-find.web/index.html
-sed -i.bak "s/\$COMMIT/$commit/g" /tmp/re-find.web/index.html
-rm "/tmp/re-find.web/index.html.bak"
+rm -rf docs
+mkdir -p docs/js
+cp out/main.js "docs/js/main-$commit.js"
+mkdir -p docs/css
+cp resources/public/css/style.css "docs/css/style-$commit.css"
+cp resources/public/prod.html docs/index.html
+sed -i.bak "s/\$COMMIT/$commit/g" docs/index.html
+rm "docs/index.html.bak"
 
 if [ "$DEPLOY" = "true" ]; then
     echo "Copying to server"
     ssh borkdude@michielborkent.nl "rm -rf re-find.web; mkdir -p re-find.web"
-    scp -r /tmp/re-find.web/* borkdude@eetvoorjeleven.nu:re-find.web
+    scp -r docs/* borkdude@eetvoorjeleven.nu:re-find.web
 elif [ "$PREVIEW" = "true" ]; then
     echo "Previewing app"
-    cd /tmp/re-find.web && python -m SimpleHTTPServer
+    cd docs && python -m SimpleHTTPServer
 fi
