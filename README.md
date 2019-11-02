@@ -47,7 +47,7 @@ Build a production version of re-find.web:
 
     script/build
 
-This will write some files to the `/tmp/re-find.web` directory.
+This will write some files to the `dist` directory.
 
 If you haven't, [install the drivers to automate your
 browsers](https://github.com/igrishaev/etaoin#installing-drivers) (currently
@@ -55,7 +55,40 @@ only Chrome is used in the tests, probably more to come).
 
 Now start the browser tests:
 
-    SERVE=/tmp/re-find.web PORT=8000 clojure -A:test
+    SERVE=dist PORT=8000 clojure -A:test
+
+## Release
+
+Static files including compiled JS are hosted on Github. This is set up like
+described
+[here](https://medium.com/linagora-engineering/deploying-your-js-app-to-github-pages-the-easy-way-or-not-1ef8c48424b7):
+
+All the commands below assume that you already have a git project initialized and that you are in its root folder.
+
+```
+# Create an orphan branch named gh-pages
+git checkout --orphan gh-pages
+# Remove all files from staging
+git rm -rf .
+# Create an empty commit so that you will be able to push on the branch next
+git commit --allow-empty -m "Init empty branch"
+# Push the branch
+git push origin gh-pages
+```
+
+Now that the branch is created and pushed to origin, let’s configure the worktree correctly:
+
+```
+# Come back to master
+git checkout master
+# Add dist to .gitignore
+echo "dist/" >> .gitignore
+git worktree add dist gh-pages
+```
+
+That’s it, you can now build your app as usual with npm run build . If you cd to
+the dist folder, you will notice that you are now in the gh-pagesbranch and if
+you go back to the root folder, you will go back to master .
 
 ## License
 
