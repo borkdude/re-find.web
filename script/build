@@ -16,9 +16,13 @@ if [ "$PREVIOUS" != "true" ]; then
 fi
 
 echo "Preparing deploy folder"
-rm -rf dist
+## do not rm dist because the orphan branch won't work anymore
+
+rm -rf dist/js
 mkdir -p dist/js
 cp out/main.js "dist/js/main-$commit.js"
+
+rm -rf dist/css
 mkdir -p dist/css
 cp resources/public/css/style.css "dist/css/style-$commit.css"
 cp resources/public/prod.html dist/index.html
