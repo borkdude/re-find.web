@@ -87,8 +87,17 @@ git worktree add dist gh-pages
 ```
 
 That’s it, you can now build your app as usual with npm run build . If you cd to
-the dist folder, you will notice that you are now in the gh-pagesbranch and if
+the dist folder, you will notice that you are now in the gh-pages branch and if
 you go back to the root folder, you will go back to master .
+
+To deploy to Github Pages:
+
+```
+cd dist
+git add .
+git commit -m "update build"
+git push
+```
 
 ## License
 
