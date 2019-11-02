@@ -12,3 +12,4 @@ pom.xml
 .cpcache/
 .rebel_readline_history
 .clj-kondo/.cache
+dist/

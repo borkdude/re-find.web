@@ -16,20 +16,20 @@ if [ "$PREVIOUS" != "true" ]; then
 fi
 
 echo "Preparing deploy folder"
-rm -rf docs
-mkdir -p docs/js
-cp out/main.js "docs/js/main-$commit.js"
-mkdir -p docs/css
-cp resources/public/css/style.css "docs/css/style-$commit.css"
-cp resources/public/prod.html docs/index.html
-sed -i.bak "s/\$COMMIT/$commit/g" docs/index.html
-rm "docs/index.html.bak"
+rm -rf dist
+mkdir -p dist/js
+cp out/main.js "dist/js/main-$commit.js"
+mkdir -p dist/css
+cp resources/public/css/style.css "dist/css/style-$commit.css"
+cp resources/public/prod.html dist/index.html
+sed -i.bak "s/\$COMMIT/$commit/g" dist/index.html
+rm "dist/index.html.bak"
 
 if [ "$DEPLOY" = "true" ]; then
     echo "Copying to server"
     ssh borkdude@michielborkent.nl "rm -rf re-find.web; mkdir -p re-find.web"
-    scp -r docs/* borkdude@eetvoorjeleven.nu:re-find.web
+    scp -r dist/* borkdude@eetvoorjeleven.nu:re-find.web
 elif [ "$PREVIEW" = "true" ]; then
     echo "Previewing app"
-    cd docs && python -m SimpleHTTPServer
+    cd dist && python -m SimpleHTTPServer
 fi
