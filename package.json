@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "codemirror": "5.44",
+    "parinfer-codemirror": "^1.4.1"
+  }
+}

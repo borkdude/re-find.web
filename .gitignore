@@ -13,3 +13,5 @@ pom.xml
 .rebel_readline_history
 .clj-kondo/.cache
 dist/
+.shadow-cljs/
+/node_modules

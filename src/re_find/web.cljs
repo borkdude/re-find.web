@@ -1,21 +1,21 @@
 (ns ^:figwheel-hooks re-find.web
   (:require
+   ["codemirror"]
+   ["codemirror.addon.display.placeholder"]
+   ["codemirror.addon.edit.matchbrackets"]
+   ["codemirror.addon.runmode.runmode"]
+   ["codemirror.mode.clojure"]
+   ["parinfer"]
+   ["parinfer-codemirror"]
    [cljs.js :as cljs]
    [cljs.tools.reader :as reader]
    [cljs.tools.reader.reader-types :refer [string-push-back-reader]]
-   [cljsjs.codemirror]
-   [cljsjs.codemirror.addon.display.placeholder]
-   [cljsjs.codemirror.addon.edit.matchbrackets]
-   [cljsjs.codemirror.mode.clojure]
-   [cljsjs.codemirror.addon.runmode.runmode]
-   [cljsjs.parinfer]
-   [cljsjs.parinfer-codemirror]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [goog.functions :as functions]
    [re-find.core :as re-find]
-   [reagent.core :as r]
-   [re-find.specs])
+   [re-find.specs]
+   [reagent.core :as r])
   (:import [goog Uri]))
 
 (defn wrap-vector [s]

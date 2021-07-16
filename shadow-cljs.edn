@@ -1,0 +1,15 @@
+{:deps
+ {:aliases [:dev]}
+
+ :dev-http
+ {8000 "classpath:public"}
+
+ :builds
+ {:main
+  {:target     :browser
+   :modules {:main {:entries [re-find.web]}}
+   :compiler-options {:optimizations :simple}
+   :build-hooks [(shadow.cljs.build-report/hook)]
+   :output-dir "resources/public/js"
+   :devtools   {:repl-pprint true}}}}
+
