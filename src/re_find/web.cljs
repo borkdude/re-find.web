@@ -1,12 +1,12 @@
 (ns ^:figwheel-hooks re-find.web
   (:require
-   ["codemirror"]
-   ["codemirror.addon.display.placeholder"]
-   ["codemirror.addon.edit.matchbrackets"]
-   ["codemirror.addon.runmode.runmode"]
-   ["codemirror.mode.clojure"]
-   ["parinfer"]
-   ["parinfer-codemirror"]
+   ;; ["codemirror"]
+   ;; ["codemirror.addon.display.placeholder"]
+   ;; ["codemirror.addon.edit.matchbrackets"]
+   ;; ["codemirror.addon.runmode.runmode"]
+   ;; ["codemirror.mode.clojure"]
+   ;; ["parinfer"]
+   ;; ["parinfer-codemirror"]
    [cljs.js :as cljs]
    [cljs.tools.reader :as reader]
    [cljs.tools.reader.reader-types :refer [string-push-back-reader]]
@@ -48,7 +48,7 @@
               [:span.cm-s-default.mono.inline])
     :component-did-mount
     (fn [this]
-      (js/CodeMirror.runMode text "clojure" (r/dom-node this)))}))
+      #_(js/CodeMirror.runMode text "clojure" (r/dom-node this)))}))
 
 (def call-for-pr
   [:span
@@ -383,10 +383,10 @@
                       ;;parinfer does this better
                       ;;:autoCloseBrackets true
                       :lineNumbers false}
-            cm (.fromTextArea js/CodeMirror
+            #_#_cm (.fromTextArea js/CodeMirror
                               (r/dom-node this)
                               opts)]
-        (.on cm "beforeChange"
+        #_#_(.on cm "beforeChange"
              (fn [instance change]
                (when (.-update change)
                  (let [new-text (.join (.-text change) "")
@@ -398,14 +398,14 @@
              (fn [x]
                (let [v (.getValue x)]
                  (swap! app-state assoc-in path v))))
-        (js/parinferCodeMirror.init cm)
-        (.removeKeyMap cm)
-        (.setOption cm "extraKeys" #js {:Shift-Tab false
+        #_(js/parinferCodeMirror.init cm)
+        #_(.removeKeyMap cm)
+        #_(.setOption cm "extraKeys" #js {:Shift-Tab false
                                         :Tab false})
-        (swap! editors assoc-in path cm)))
+        #_(swap! editors assoc-in path cm)))
     :component-will-unmount
     (fn []
-      (let [cm (get-in @editors path)]
+      #_(let [cm (get-in @editors path)]
         ;; toTextArea will destroy and clean up cm
         (.toTextArea cm)))}))
 
